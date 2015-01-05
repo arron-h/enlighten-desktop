@@ -1,3 +1,9 @@
 [submodule "thirdparty/libs3"]
 	path = thirdparty/libs3
 	url = https://github.com/bji/libs3.git
+[submodule "thirdparty/gmock"]
+	path = thirdparty/gmock
+	url = https://github.com/cpp-mirrors/gmock.git
+[submodule "thirdparty/gtest"]
+	path = thirdparty/gtest
+	url = https://github.com/cpp-mirrors/gtest.git
