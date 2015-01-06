@@ -1,0 +1,16 @@
+language: cpp
+compiler:
+    - gcc
+    - clang
+before_install:
+    - echo $LANG
+    - echo $LC_ALL
+    - if [ $TRAVIS_OS_NAME == linux ]; then sudo apt-get update && sudo apt-get install -y llvm-3.4 llvm-3.4-dev; fi
+    - if [ $TRAVIS_OS_NAME == osx ]; then brew update && brew install llvm && brew link --force llvm; fi
+install:
+    - if [ $TRAVIS_OS_NAME == linux ]; then sudo apt-get install cmake; fi
+    - if [ $TRAVIS_OS_NAME == osx ]; then brew install cmake; fi
+before_script:
+    - mkdir build
+script:
+    - cd build && cmake .. && make
