@@ -1,6 +1,6 @@
 #include "lrprev.h"
-#include <string>
-#include <stdlib.h>
+#include <cstring>
+#include <cstdlib>
 
 #include "validation.h"
 
@@ -38,7 +38,7 @@ bool LrPrev::initialiseWithFile(const char* fileName)
 	char markerBytes[4];
 	fread(markerBytes, 1, 4, file);
 	
-	VALIDATE((strncmp(markerBytes, "AgHg", 4) == 0), "Marker bytes are invalid");
+	VALIDATE(strncmp(markerBytes, "AgHg", 4) == 0, "Marker bytes are invalid");
 	
 	_fileHandle = file;
 	return true;

@@ -39,8 +39,7 @@ include_directories (
 	thirdparty/gmock/include
 	thirdparty/gtest/include)
 
-file (GLOB LIB_TESTS test/*_test.cpp)
+file (GLOB LIB_TESTS test/spec/*_test.cpp)
 
-add_executable (enlighten_tests ${LIB_TESTS})
-target_link_libraries (enlighten_tests enlighten_lib gmock_main)
-
+add_executable (enlighten_lib_tests ${LIB_TESTS})
+target_link_libraries (enlighten_lib_tests enlighten_lib gmock_main)

@@ -14,3 +14,4 @@ before_script:
     - mkdir build
 script:
     - cd build && cmake .. && make
+    - cd test && ./run_tests.py --sourceRoot=../build/ --dataRoot=data/
