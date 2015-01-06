@@ -6,6 +6,6 @@
 TEST(LrPrev, ShouldFailToInitialiseWithAnInvalidFile)
 {
 	LrPrev lrPrev;
-	ASSERT_EQ(lrPrev.initialiseWithFile("somefile.lrprev"), false);
-	ASSERT_EQ(lrPrev.initialiseWithFile(NULL), false);
+	EXPECT_FALSE(lrPrev.initialiseWithFile("somefile.lrprev"));
+	EXPECT_FALSE(lrPrev.initialiseWithFile(NULL));
 }
