@@ -14,7 +14,8 @@ def main(args):
 	for test in tests:
 		try:
 			subprocess.check_call([test], cwd=args.dataRoot)
-		except subprocess.CalledProcessError:
+		except subprocess.CalledProcessError as e:
+			print e.cmd + " failed with return code: " + str(e.returncode)
 			testsSuccessful = False
 
 	return testsSuccessful
