@@ -4,20 +4,6 @@
 
 #include "validation.h"
 
-static unsigned int swapEndian4(unsigned int val)
-{
-	unsigned int v = 0;
-	unsigned char* sourceBytes = reinterpret_cast<unsigned char*>(&val);
-	unsigned char* targetBytes = reinterpret_cast<unsigned char*>(&v);
-
-	targetBytes[0] = sourceBytes[3];
-	targetBytes[1] = sourceBytes[2];
-	targetBytes[2] = sourceBytes[1];
-	targetBytes[3] = sourceBytes[0];
-
-	return v;
-}
-
 LrPrev::LrPrev() : _fileHandle(NULL)
 {
 }
@@ -47,29 +33,49 @@ bool LrPrev::initialiseWithFile(const char* fileName)
 	return true;
 }
 
-unsigned char* LrPrev::extractFromLevel(int level, unsigned int& jpegByteCount)
+unsigned int LrPrev::swapEndian4Bytes(unsigned int value)
 {
-	VALIDATE_AND_RETURN(NULL, _fileHandle, "File handle is not valid!");
+	unsigned int swappedValue = 0;
+	unsigned char* sourceBytes = reinterpret_cast<unsigned char*>(&value);
+	unsigned char* targetBytes = reinterpret_cast<unsigned char*>(&swappedValue);
 
-	// Make sure the file handle points to the begining of the file.
-	rewind(_fileHandle);
+	targetBytes[0] = sourceBytes[3];
+	targetBytes[1] = sourceBytes[2];
+	targetBytes[2] = sourceBytes[1];
+	targetBytes[3] = sourceBytes[0];
 
-	unsigned char* jpegBytes = NULL;
+	return swappedValue;
+}
 
+bool LrPrev::skipNullBytes(int numberOfBytesToSkip)
+{
+	int testBytes = 0;
+	fread(&testBytes, 4, 1, _fileHandle);
+
+	return testBytes == 0;
+}
+
+bool LrPrev::readHeader()
+{
 	// Seek past the first 4 marker bytes, and 4 further bytes. Probably a tag or something
 	fseek(_fileHandle, 8, SEEK_CUR);
 
-	VALIDATE_AND_RETURN(NULL, skipNullBytes(4), "Bytes skipped were not null!");
+	VALIDATE(skipNullBytes(4), "Bytes skipped were not null!");
 
+	return true;
+}
+
+bool LrPrev::readJsonBlob()
+{
 	unsigned int jsonSize = 0;
 	fread(&jsonSize, 4, 1, _fileHandle);
-	jsonSize = swapEndian4(jsonSize);
+	jsonSize = swapEndian4Bytes(jsonSize);
 
-	VALIDATE_AND_RETURN(NULL, skipNullBytes(4), "Bytes skipped were not null!");
+	VALIDATE(skipNullBytes(4), "Bytes skipped were not null!");
 
 	unsigned int jsonEndPadding = 0;
 	fread(&jsonEndPadding, 4, 1, _fileHandle);
-	jsonEndPadding = swapEndian4(jsonEndPadding);
+	jsonEndPadding = swapEndian4Bytes(jsonEndPadding);
 
 	// Seek past 'header  '.
 	fseek(_fileHandle, 8, SEEK_CUR);
@@ -80,6 +86,21 @@ unsigned char* LrPrev::extractFromLevel(int level, unsigned int& jpegByteCount)
 	// Seek past the padding
 	fseek(_fileHandle, jsonEndPadding, SEEK_CUR);
 
+	return true;
+}
+
+unsigned char* LrPrev::extractFromLevel(int level, unsigned int& jpegByteCount)
+{
+	VALIDATE_AND_RETURN(NULL, _fileHandle, "File handle is not valid!");
+
+	// Make sure the file handle points to the begining of the file.
+	rewind(_fileHandle);
+
+	unsigned char* jpegBytes = NULL;
+
+	VALIDATE_AND_RETURN(NULL, readHeader(), "Failed to read LrPrev header.");
+	VALIDATE_AND_RETURN(NULL, readJsonBlob(), "Failed to read Json blob from LrPrev.");
+
 	// Loop all the levels
 	while (!feof(_fileHandle))
 	{
@@ -89,14 +110,16 @@ unsigned char* LrPrev::extractFromLevel(int level, unsigned int& jpegByteCount)
 		VALIDATE_AND_RETURN(NULL, skipNullBytes(4), "Bytes skipped were not null!");
 
 		unsigned int levelSize = 0;
-		fread(&levelSize, 4, 1, _fileHandle);
-		levelSize = swapEndian4(levelSize);
+		if (fread(&levelSize, 4, 1, _fileHandle) != 1)
+			break;
+
+		levelSize = swapEndian4Bytes(levelSize);
 
 		VALIDATE_AND_RETURN(NULL, skipNullBytes(4), "Bytes skipped were not null!");
 
 		unsigned int endPaddingBytes = 0;
 		fread(&endPaddingBytes, 4, 1, _fileHandle);
-		endPaddingBytes = swapEndian4(endPaddingBytes);
+		endPaddingBytes = swapEndian4Bytes(endPaddingBytes);
 
 		// Read the level descriptor
 		char levelDescriptor[32];
@@ -112,7 +135,7 @@ unsigned char* LrPrev::extractFromLevel(int level, unsigned int& jpegByteCount)
 		int levelNumber = 0;
 		sscanf(levelDescriptor, "level_%d", &levelNumber);
 
-		VALIDATE_AND_RETURN(NULL, (levelNumber!=0), "Level number could not be parsed");
+		VALIDATE_AND_RETURN(NULL, levelNumber!=0, "Level number could not be parsed");
 
 		if (levelNumber == level)
 		{
@@ -134,12 +157,4 @@ unsigned char* LrPrev::extractFromLevel(int level, unsigned int& jpegByteCount)
 	}
 
 	return jpegBytes;
-}
-
-bool LrPrev::skipNullBytes(int numberOfBytesToSkip)
-{
-	int testBytes = 0;
-	fread(&testBytes, 4, 1, _fileHandle);
-
-	return testBytes == 0;
 }
