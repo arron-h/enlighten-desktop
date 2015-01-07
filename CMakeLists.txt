@@ -33,13 +33,21 @@ add_executable (enlighten_cli
 	${CLI_SOURCE})
 target_link_libraries (enlighten_cli enlighten_lib)
 
-### Tests
+### Tests. Note that we are NOT using CMake's add_test() functionality. Instead
+#   we define a custom unit_test target and rely on that to run our gtest tests.
 add_subdirectory (thirdparty/gmock)
 include_directories (
 	thirdparty/gmock/include
 	thirdparty/gtest/include)
 
-file (GLOB LIB_TESTS test/spec/*_test.cpp)
+# Lib tests
+file (GLOB LIB_TEST_SOURCES test/spec/*_test.cpp)
+set (LIB_UNIT_TEST_NAME     enlighten_lib_unit_tests)
+add_executable (${LIB_UNIT_TEST_NAME} ${LIB_TEST_SOURCES})
+target_link_libraries (${LIB_UNIT_TEST_NAME} enlighten_lib gmock_main)
 
-add_executable (enlighten_lib_tests ${LIB_TESTS})
-target_link_libraries (enlighten_lib_tests enlighten_lib gmock_main)
+# A target to run all unit tests. Add more tests to this target if needed.
+add_custom_target (unit_tests
+	COMMAND ${LIB_UNIT_TEST_NAME} --gtest_color=yes
+	DEPENDS ${LIB_UNIT_TEST_NAME}
+	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/test/data)
