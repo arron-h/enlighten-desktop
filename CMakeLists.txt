@@ -2,6 +2,14 @@ cmake_minimum_required (VERSION 2.6.0)
 
 project (enlighten)
 
+### Generate a useful .ycm_extra_conf file
+set (CMAKE_EXPORT_COMPILE_COMMANDS 1)
+file (READ .ycm_extra_conf.py YCM_EXTRA_CONF_CONTENTS)
+string (REGEX REPLACE "compilation_database_folder = '.*'(\r?\n)"
+	"compilation_database_folder = '${CMAKE_BINARY_DIR}'\\1"
+	UPDATED_YCM_EXTRA_CONF_CONTENTS "${YCM_EXTRA_CONF_CONTENTS}")
+file (WRITE .ycm_extra_conf.py ${UPDATED_YCM_EXTRA_CONF_CONTENTS})
+
 ### Global options and flags
 include_directories (
 	include
@@ -10,13 +18,17 @@ include_directories (
 ### Include files
 set (LIB_INCLUDE
 	include/lrprev.h
+	include/previewsdatabase.h
+	include/previewentry.h
 	include/validation.h)
 
 ### Source files
 set (SQLITE_SOURCE
 	thirdparty/sqlite3/src/sqlite3.c)
 set (LIB_SOURCE
-	src/lrprev.cpp)
+	src/lrprev.cpp
+	src/previewsdatabase.cpp
+	src/previewentry.cpp)
 set (CLI_SOURCE
 	src/cli.cpp)
 
