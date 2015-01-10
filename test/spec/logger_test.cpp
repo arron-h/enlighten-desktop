@@ -42,7 +42,7 @@ TEST_F(LoggerTest, ShouldBeAbleToStringifySeverityLevels)
 {
 	Logger::Severity debugSeverity = Logger::DEBUG;
 
-	EXPECT_EQ(Logger::stringifySeverity(debugSeverity), "Debug");
+	EXPECT_STREQ("Debug", Logger::stringifySeverity(debugSeverity));
 }
 
 TEST_F(LoggerTest, ShouldCallLoggerDelegateWhenADelegateIsSet)
