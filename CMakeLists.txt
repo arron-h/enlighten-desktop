@@ -15,9 +15,12 @@ include_directories (
 	include
 	thirdparty/sqlite3/include)
 
+list (APPEND CMAKE_CXX_FLAGS "-std=c++11")
+
 ### Include files
 set (LIB_INCLUDE
 	include/lrprev.h
+	include/logger.h
 	include/previewsdatabase.h
 	include/previewentry.h
 	include/validation.h)
@@ -27,6 +30,7 @@ set (SQLITE_SOURCE
 	thirdparty/sqlite3/src/sqlite3.c)
 set (LIB_SOURCE
 	src/lrprev.cpp
+	src/logger.cpp
 	src/previewsdatabase.cpp
 	src/previewentry.cpp)
 set (CLI_SOURCE

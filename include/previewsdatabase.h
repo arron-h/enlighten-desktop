@@ -3,6 +3,7 @@
 
 #include <vector>
 
+struct sqlite3;
 class PreviewEntry;
 class PreviewsDatabase
 {
@@ -17,6 +18,7 @@ public:
 
 private:
 	std::vector<PreviewEntry*> _cachedEntries;
+	sqlite3* _sqliteDatabase;
 };
 
 #endif // PREVIEWS_DATABASE_H
