@@ -22,6 +22,8 @@ public:
 	static const char* stringifySeverity(Severity severity);
 
 	void setLoggerDelegate(AbstractLoggerDelegate* delegate);
+	AbstractLoggerDelegate* currentDelegate() const;
+
 	void log(Severity severity, const char* message, ...);
 private:
 	Logger();

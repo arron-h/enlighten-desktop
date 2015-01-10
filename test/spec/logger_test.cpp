@@ -17,10 +17,16 @@ class LoggerTest : public testing::Test
 public:
 	LoggerTest()
 	{
-		Logger::get().setLoggerDelegate(nullptr);
+		previousLogger = Logger::get().currentDelegate();
 	}
-	
+
+	~LoggerTest()
+	{
+		Logger::get().setLoggerDelegate(previousLogger);
+	}
+
 protected:
+	AbstractLoggerDelegate* previousLogger;
 	MockLoggerDelegate mockDelegate;
 };
 

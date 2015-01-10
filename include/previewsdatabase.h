@@ -1,9 +1,12 @@
 #ifndef PREVIEWS_DATABASE_H
 #define PREVIEWS_DATABASE_H
 
+#include <map>
 #include <vector>
+#include "previewentrylevel.h"
 
 struct sqlite3;
+struct sqlite3_stmt;
 
 namespace enlighten
 {
@@ -22,7 +25,14 @@ public:
 	const PreviewEntry* entryForIndex(unsigned int index);
 
 private:
-	std::vector<PreviewEntry*> _cachedEntries;
+	sqlite3_stmt* makeStatement(const char* query);
+	bool selectImageCacheEntryColumnsForIndex(unsigned int index,
+		std::string& uuid, std::string& digest);
+	bool selectPyramidColumnsForUuid(const std::string& uuid,
+		std::vector<PreviewEntryLevel>& levels);
+
+private:
+	std::map<unsigned int, PreviewEntry*> _cachedEntries;
 	sqlite3* _sqliteDatabase;
 };
 } // lib

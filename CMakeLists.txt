@@ -23,6 +23,7 @@ set (LIB_INCLUDE
 	include/logger.h
 	include/previewsdatabase.h
 	include/previewentry.h
+	include/previewentrylevel.h
 	include/validation.h)
 
 ### Source files
@@ -32,7 +33,8 @@ set (LIB_SOURCE
 	src/lrprev.cpp
 	src/logger.cpp
 	src/previewsdatabase.cpp
-	src/previewentry.cpp)
+	src/previewentry.cpp
+	src/previewentrylevel.cpp)
 set (CLI_SOURCE
 	src/cli.cpp)
 
@@ -58,9 +60,10 @@ include_directories (
 
 # Lib tests
 file (GLOB LIB_TEST_SOURCES test/spec/*_test.cpp)
+list (APPEND LIB_TEST_SOURCES test/libunittests.cpp)
 set (LIB_UNIT_TEST_NAME     enlighten_lib_unit_tests)
 add_executable (${LIB_UNIT_TEST_NAME} ${LIB_TEST_SOURCES})
-target_link_libraries (${LIB_UNIT_TEST_NAME} enlighten_lib gmock_main)
+target_link_libraries (${LIB_UNIT_TEST_NAME} enlighten_lib gmock)
 
 # A target to run all unit tests. Add more tests to this target if needed.
 add_custom_target (unit_tests

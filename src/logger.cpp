@@ -34,6 +34,11 @@ void Logger::setLoggerDelegate(AbstractLoggerDelegate* delegate)
 	_delegate = delegate;
 }
 
+AbstractLoggerDelegate* Logger::currentDelegate() const
+{
+	return _delegate;
+}
+
 void Logger::log(Severity severity, const char* message, ...)
 {
 	char logBuffer[256];

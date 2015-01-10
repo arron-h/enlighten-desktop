@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "previewentrylevel.h"
+
 namespace enlighten
 {
 namespace lib
@@ -11,7 +13,8 @@ namespace lib
 class PreviewEntry
 {
 public:
-	PreviewEntry();
+	PreviewEntry(const std::string& uuid, const std::string& digest,
+		const std::vector<PreviewEntryLevel>& levels);
 
 	const std::string& uuid() const;
 	const std::string& digest() const;
@@ -19,7 +22,7 @@ public:
 	std::string filePathRelativeToRoot() const;
 
 	unsigned int numberOfLevels() const;
-	unsigned int closestLevelIndex(unsigned int longDimension) const;
+	unsigned int closestLevelToDimension(float longDimension) const;
 
 	static const unsigned int INVALID_LEVEL_INDEX;
 
@@ -27,14 +30,7 @@ private:
 	std::string _uuid;
 	std::string _digest;
 
-	struct Level
-	{
-		unsigned int levelNumber;
-		float longDimension;
-	};
-	std::vector<Level> _levels;
-
-	friend class PreviewDatabase;
+	std::vector<PreviewEntryLevel> _levels;
 };
 } // lib
 } // enlighten
