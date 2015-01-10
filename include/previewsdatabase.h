@@ -4,6 +4,11 @@
 #include <vector>
 
 struct sqlite3;
+
+namespace enlighten
+{
+namespace lib
+{
 class PreviewEntry;
 class PreviewsDatabase
 {
@@ -20,5 +25,7 @@ private:
 	std::vector<PreviewEntry*> _cachedEntries;
 	sqlite3* _sqliteDatabase;
 };
+} // lib
+} // enlighten
 
 #endif // PREVIEWS_DATABASE_H

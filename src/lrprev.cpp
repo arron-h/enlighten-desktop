@@ -4,6 +4,10 @@
 
 #include "validation.h"
 
+namespace enlighten
+{
+namespace lib
+{
 LrPrev::LrPrev() : _fileHandle(NULL)
 {
 }
@@ -158,3 +162,5 @@ unsigned char* LrPrev::extractFromLevel(int level, unsigned int& jpegByteCount)
 
 	return jpegBytes;
 }
+} // lib
+} // enlighten

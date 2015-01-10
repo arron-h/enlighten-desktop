@@ -2,6 +2,10 @@
 
 #include "validation.h"
 
+namespace enlighten
+{
+namespace lib
+{
 const unsigned int PreviewEntry::INVALID_LEVEL_INDEX = 0xFFFF;
 
 PreviewEntry::PreviewEntry()
@@ -32,3 +36,5 @@ unsigned int PreviewEntry::closestLevelIndex(unsigned int longDimension) const
 {
 	return INVALID_LEVEL_INDEX;
 }
+} // lib
+} // enlighten

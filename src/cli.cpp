@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
 	ConsoleLoggerDelegate logger;
 	lib::Logger::get().setLoggerDelegate(&logger);
 
-	LrPrev lrPrevFile;
+	lib::LrPrev lrPrevFile;
 	if (!lrPrevFile.initialiseWithFile(filePath))
 		return -1;
 

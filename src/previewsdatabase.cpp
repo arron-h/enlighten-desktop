@@ -4,6 +4,10 @@
 
 #include "sqlite3.h"
 
+namespace enlighten
+{
+namespace lib
+{
 PreviewsDatabase::PreviewsDatabase() : _sqliteDatabase(NULL)
 {
 }
@@ -36,3 +40,5 @@ const PreviewEntry* PreviewsDatabase::entryForIndex(unsigned int index)
 {
 	return NULL;
 }
+} // lib
+} // enlighten

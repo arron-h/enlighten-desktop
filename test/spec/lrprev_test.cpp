@@ -3,6 +3,8 @@
 
 #include "lrprev.h"
 
+using namespace enlighten::lib;
+
 static const char* LrPrev_ValidPreviewFiles[] =
 {
 	"catalogs/Lightroom 5 Catalog Previews.lrdata/3/3829/3829E5FC-7F3F-4B22-94F3-FB5E2C796026-07cc63f155500a902b21fef7be6585b5.lrprev",

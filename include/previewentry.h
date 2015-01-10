@@ -4,6 +4,10 @@
 #include <string>
 #include <vector>
 
+namespace enlighten
+{
+namespace lib
+{
 class PreviewEntry
 {
 public:
@@ -32,5 +36,7 @@ private:
 
 	friend class PreviewDatabase;
 };
+} // lib
+} // enlighten
 
 #endif // PREVIEW_ENTRY_H

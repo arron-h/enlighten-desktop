@@ -4,6 +4,8 @@
 #include "previewsdatabase.h"
 #include "previewentry.h"
 
+using namespace enlighten::lib;
+
 static const char* PreviewsDatabase_ValidPreviewFile =
 	"catalogs/Lightroom 5 Catalog Previews.lrdata/previews.db";
 

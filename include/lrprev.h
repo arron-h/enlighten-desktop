@@ -3,6 +3,10 @@
 
 #include <cstdio>
 
+namespace enlighten
+{
+namespace lib
+{
 class LrPrev
 {
 public:
@@ -21,5 +25,7 @@ private:
 
 	FILE*		_fileHandle;
 };
+} // lib
+} // enlighten
 
 #endif
