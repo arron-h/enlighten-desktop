@@ -16,6 +16,9 @@ include_directories (
 	thirdparty/sqlite3/include)
 
 list (APPEND CMAKE_CXX_FLAGS "-std=c++11")
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	set (PLATFORM_LINK_LIBS "dl")
+endif ()
 
 ### Include files
 set (LIB_INCLUDE
@@ -49,7 +52,7 @@ add_library (enlighten_lib
 # CLI executable
 add_executable (enlighten_cli
 	${CLI_SOURCE})
-target_link_libraries (enlighten_cli enlighten_lib)
+target_link_libraries (enlighten_cli enlighten_lib ${PLATFORM_LINK_LIBS})
 
 ### Tests. Note that we are NOT using CMake's add_test() functionality. Instead
 #   we define a custom unit_test target and rely on that to run our gtest tests.
@@ -63,7 +66,7 @@ file (GLOB LIB_TEST_SOURCES test/spec/*_test.cpp)
 list (APPEND LIB_TEST_SOURCES test/libunittests.cpp)
 set (LIB_UNIT_TEST_NAME     enlighten_lib_unit_tests)
 add_executable (${LIB_UNIT_TEST_NAME} ${LIB_TEST_SOURCES})
-target_link_libraries (${LIB_UNIT_TEST_NAME} enlighten_lib gmock)
+target_link_libraries (${LIB_UNIT_TEST_NAME} enlighten_lib gmock ${PLATFORM_LINK_LIBS})
 
 # A target to run all unit tests. Add more tests to this target if needed.
 add_custom_target (unit_tests
