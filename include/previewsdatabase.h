@@ -1,6 +1,7 @@
 #ifndef PREVIEWS_DATABASE_H
 #define PREVIEWS_DATABASE_H
 
+#include <string>
 #include <map>
 #include <vector>
 #include "previewentrylevel.h"
