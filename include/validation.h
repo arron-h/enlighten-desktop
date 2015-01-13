@@ -17,4 +17,17 @@
 		return false;\
 	}
 
+#define CHECK(expression) \
+	if(!(expression))\
+	{\
+		return false;\
+	}
+
+#define CHECK_AND_RETURN(returnValue, expression) \
+	if(!(expression))\
+	{\
+		return (returnValue);\
+	}
+
+
 #endif

@@ -49,7 +49,7 @@ TEST_F(LoggerTest, ShouldCallLoggerDelegateWhenADelegateIsSet)
 {
 	Logger::get().setLoggerDelegate(&mockDelegate);
 
-	EXPECT_CALL(mockDelegate, processLogMessage(Logger::ERROR, testing::_)).Times(1);
+	EXPECT_CALL(mockDelegate, processLogMessage(Logger::ERROR, testing::StrEq("My log message 1"))).Times(1);
 
 	Logger::get().log(Logger::ERROR, "My %s message %d", "log", 1);
 }

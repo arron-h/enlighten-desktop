@@ -34,6 +34,7 @@ private:
 class AbstractLoggerDelegate
 {
 public:
+	~AbstractLoggerDelegate() {}
 	virtual void processLogMessage(Logger::Severity severity, const char* message) = 0;
 };
 
