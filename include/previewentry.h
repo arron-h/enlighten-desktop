@@ -10,13 +10,15 @@ namespace enlighten
 {
 namespace lib
 {
+typedef std::string uuid_t;
+
 class PreviewEntry
 {
 public:
 	PreviewEntry(const std::string& uuid, const std::string& digest,
 		const std::vector<PreviewEntryLevel>& levels);
 
-	const std::string& uuid() const;
+	const uuid_t& uuid() const;
 	const std::string& digest() const;
 
 	std::string filePathRelativeToRoot() const;
@@ -27,7 +29,7 @@ public:
 	static const unsigned int INVALID_LEVEL_INDEX;
 
 private:
-	std::string _uuid;
+	uuid_t _uuid;
 	std::string _digest;
 
 	std::vector<PreviewEntryLevel> _levels;
