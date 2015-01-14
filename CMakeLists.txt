@@ -61,15 +61,27 @@ include_directories (
 	thirdparty/gmock/include
 	thirdparty/gtest/include)
 
-# Lib tests
-file (GLOB LIB_TEST_SOURCES test/spec/*_test.cpp)
+# Lib unit tests
+file (GLOB LIB_TEST_SOURCES test/unit/lib/*_test.cpp)
 list (APPEND LIB_TEST_SOURCES test/libunittests.cpp)
 set (LIB_UNIT_TEST_NAME     enlighten_lib_unit_tests)
 add_executable (${LIB_UNIT_TEST_NAME} ${LIB_TEST_SOURCES})
-target_link_libraries (${LIB_UNIT_TEST_NAME} enlighten_lib gmock ${PLATFORM_LINK_LIBS})
+target_link_libraries (${LIB_UNIT_TEST_NAME} enlighten_lib gmock ${PLATFORM_LINK_LIBS} ${DEPENDENCY_LIBS})
+
+# Lib integration tests
+file (GLOB LIB_INTEGRATION_TEST_SOURCES test/integration/lib/*_test.cpp)
+list (APPEND LIB_INTEGRATION_TEST_SOURCES test/libintegrationtests.cpp)
+set (LIB_INTEGRATION_TEST_NAME     enlighten_lib_integration_tests)
+add_executable (${LIB_INTEGRATION_TEST_NAME} ${LIB_INTEGRATION_TEST_SOURCES})
+target_link_libraries (${LIB_INTEGRATION_TEST_NAME} enlighten_lib gmock ${PLATFORM_LINK_LIBS} ${DEPENDENCY_LIBS})
 
 # A target to run all unit tests. Add more tests to this target if needed.
 add_custom_target (unit_tests
 	COMMAND ${LIB_UNIT_TEST_NAME} --gtest_color=yes
 	DEPENDS ${LIB_UNIT_TEST_NAME}
+	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/test/data)
+
+add_custom_target (integration_tests
+	COMMAND ${LIB_INTEGRATION_TEST_NAME} --gtest_color=yes
+	DEPENDS ${LIB_INTEGRATION_TEST_NAME}
 	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/test/data)
