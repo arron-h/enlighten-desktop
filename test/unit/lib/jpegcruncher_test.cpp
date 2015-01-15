@@ -5,6 +5,7 @@
 #include "jpeg.h"
 
 #include <cstdio>
+#include <cstring>
 #include <sys/stat.h>
 
 using namespace enlighten::lib;

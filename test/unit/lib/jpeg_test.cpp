@@ -2,6 +2,7 @@
 #include "gtest/gtest.h"
 
 #include <cstdio>
+#include <cstring>
 #include <sys/stat.h>
 
 #include "jpeg.h"

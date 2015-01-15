@@ -4,6 +4,7 @@
 
 #include <jpeglib.h>
 #include <cstdlib>
+#include <cstring>
 
 namespace enlighten
 {
