@@ -3,17 +3,25 @@ cmake_minimum_required (VERSION 2.6.0)
 project (enlighten)
 
 ### Generate a useful .ycm_extra_conf file
-set (CMAKE_EXPORT_COMPILE_COMMANDS 1)
-file (READ .ycm_extra_conf.py YCM_EXTRA_CONF_CONTENTS)
-string (REGEX REPLACE "compilation_database_folder = '.*'(\r?\n)"
-	"compilation_database_folder = '${CMAKE_BINARY_DIR}'\\1"
-	UPDATED_YCM_EXTRA_CONF_CONTENTS "${YCM_EXTRA_CONF_CONTENTS}")
-file (WRITE .ycm_extra_conf.py ${UPDATED_YCM_EXTRA_CONF_CONTENTS})
+if (${CMAKE_GENERATOR} MATCHES "Unix Makefiles")
+	message ("Generating compile commands")
+	set (CMAKE_EXPORT_COMPILE_COMMANDS 1)
+	file (READ .ycm_extra_conf.py YCM_EXTRA_CONF_CONTENTS)
+	string (REGEX REPLACE "compilation_database_folder = '.*'(\r?\n)"
+		"compilation_database_folder = '${CMAKE_BINARY_DIR}'\\1"
+		UPDATED_YCM_EXTRA_CONF_CONTENTS "${YCM_EXTRA_CONF_CONTENTS}")
+	file (WRITE .ycm_extra_conf.py ${UPDATED_YCM_EXTRA_CONF_CONTENTS})
+endif ()
+
+### Dependencies
+find_package (JPEG REQUIRED)
+list (APPEND DEPENDENCY_LIBS ${JPEG_LIBRARIES})
 
 ### Global options and flags
 include_directories (
 	include
-	thirdparty/sqlite3/include)
+	thirdparty/sqlite3/include
+	${JPEG_INCLUDE_DIR})
 
 list (APPEND CMAKE_CXX_FLAGS "-std=c++11")
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
@@ -22,6 +30,8 @@ endif ()
 
 ### Include files
 set (LIB_INCLUDE
+	include/jpeg.h
+	include/jpegcruncher.h
 	include/lrprev.h
 	include/logger.h
 	include/previewsdatabase.h
@@ -33,6 +43,8 @@ set (LIB_INCLUDE
 set (SQLITE_SOURCE
 	thirdparty/sqlite3/src/sqlite3.c)
 set (LIB_SOURCE
+	src/jpeg.cpp
+	src/jpegcruncher.cpp
 	src/lrprev.cpp
 	src/logger.cpp
 	src/previewsdatabase.cpp
@@ -52,7 +64,7 @@ add_library (enlighten_lib
 # CLI executable
 add_executable (enlighten_cli
 	${CLI_SOURCE})
-target_link_libraries (enlighten_cli enlighten_lib ${PLATFORM_LINK_LIBS})
+target_link_libraries (enlighten_cli enlighten_lib ${PLATFORM_LINK_LIBS} ${DEPENDENCY_LIBS})
 
 ### Tests. Note that we are NOT using CMake's add_test() functionality. Instead
 #   we define a custom unit_test target and rely on that to run our gtest tests.
