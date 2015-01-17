@@ -64,6 +64,13 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 		src/platform/osx/file.cpp)
 
 	include_directories(include/platform/osx)
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	set (PLATFORM_LIB_INCLUDE
+		include/platform/linux/file.h)
+	set (PLATFORM_LIB_SOURCE
+		src/platform/linux/file.cpp)
+
+	include_directories(include/platform/linux)
 endif ()
 
 ### Executables and Targets
