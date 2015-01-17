@@ -30,6 +30,7 @@ endif ()
 
 ### Include files
 set (LIB_INCLUDE
+	include/ifile.h
 	include/jpeg.h
 	include/jpegcruncher.h
 	include/lrprev.h
@@ -37,7 +38,8 @@ set (LIB_INCLUDE
 	include/previewsdatabase.h
 	include/previewentry.h
 	include/previewentrylevel.h
-	include/validation.h)
+	include/validation.h
+	include/watcher.h)
 
 ### Source files
 set (SQLITE_SOURCE
@@ -49,9 +51,20 @@ set (LIB_SOURCE
 	src/logger.cpp
 	src/previewsdatabase.cpp
 	src/previewentry.cpp
-	src/previewentrylevel.cpp)
+	src/previewentrylevel.cpp
+	src/watcher.cpp)
 set (CLI_SOURCE
 	src/cli.cpp)
+
+### Platform source/include files
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+	set (PLATFORM_LIB_INCLUDE
+		include/platform/osx/file.h)
+	set (PLATFORM_LIB_SOURCE
+		src/platform/osx/file.cpp)
+
+	include_directories(include/platform/osx)
+endif ()
 
 ### Executables and Targets
 # Core functionality library
@@ -59,6 +72,8 @@ add_library (enlighten_lib
 	STATIC
 	${LIB_SOURCE}
 	${LIB_INCLUDE}
+	${PLATFORM_LIB_SOURCE}
+	${PLATFORM_LIB_INCLUDE}
 	${SQLITE_SOURCE})
 
 # CLI executable
