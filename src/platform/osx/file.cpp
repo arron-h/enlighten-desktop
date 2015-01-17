@@ -125,6 +125,9 @@ bool File::duplicate(const char* destination)
 
 uint64_t File::lastModificationTime()
 {
+	if (!isValid())
+		return 0;
+
 	struct stat attrib;
 	stat(_file.c_str(), &attrib);
 	__darwin_time_t lastModTime = attrib.st_mtimespec.tv_sec;
