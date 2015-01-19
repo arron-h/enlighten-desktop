@@ -39,6 +39,8 @@ set (LIB_INCLUDE
 	include/previewsdatabase.h
 	include/previewentry.h
 	include/previewentrylevel.h
+	include/settings.h
+	include/syncaction.h
 	include/validation.h
 	include/watcher.h)
 
@@ -54,6 +56,7 @@ set (LIB_SOURCE
 	src/previewsdatabase.cpp
 	src/previewentry.cpp
 	src/previewentrylevel.cpp
+	src/settings.cpp
 	src/watcher.cpp)
 set (CLI_SOURCE
 	src/cli.cpp)

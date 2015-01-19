@@ -12,7 +12,7 @@ namespace enlighten
 namespace lib
 {
 CachedPreviews::CachedPreviews(IEnlightenSettings* settings) : _sqliteDatabase(nullptr),
-	_settings(settings), _lastChecked(0)
+	_settings(settings)
 {
 }
 
@@ -34,17 +34,6 @@ bool CachedPreviews::loadOrCreateDatabase()
 		return createCachedPreviewsDatabase(filePath);
 
 	return true;
-}
-
-void CachedPreviews::previewsChecked()
-{
-	auto fromEpoch = std::chrono::system_clock::now().time_since_epoch();
-	_lastChecked = std::chrono::duration_cast<std::chrono::seconds>(fromEpoch).count();
-}
-
-uint64_t CachedPreviews::lastCachedTime() const
-{
-	return _lastChecked;
 }
 
 uint32_t CachedPreviews::numberOfCachedPreviews() const
@@ -95,6 +84,31 @@ bool CachedPreviews::markAsCached(const uuid_t& uuid)
 	VALIDATE(written < 128, "Buffer overflow");
 
 	return executeAndCheckQuery(query, SQLITE_DONE);
+}
+
+bool CachedPreviews::generateProxy(std::set<uuid_t>& entries) const
+{
+	// Iterates over all of the current cached entries and returns a
+	// 'proxy' container, which is mutable by clients.
+
+	VALIDATE(_sqliteDatabase, "Sqlite database is in an invalid state.");
+
+	const char* query = "SELECT uuid FROM PreviewsCache";
+
+	sqlite3_stmt* statement = nullptr;
+	int statementResult = sqlite3_prepare_v2(_sqliteDatabase, query, -1, &statement,
+		NULL);
+
+	VALIDATE_AND_RETURN(nullptr, statementResult == SQLITE_OK, "Statement '%s' error. Reason: %s",
+		query, sqlite3_errmsg(_sqliteDatabase));
+
+	if (sqlite3_step(statement) == SQLITE_ROW)
+	{
+		const char* uuidStr = reinterpret_cast<const char*>(sqlite3_column_text(statement, 0));
+		entries.insert(uuidStr);
+	}
+
+	return true;
 }
 
 bool CachedPreviews::createCachedPreviewsDatabase(const std::string& filePath)

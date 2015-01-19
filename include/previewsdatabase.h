@@ -7,6 +7,7 @@
 #include <set>
 #include "previewentrylevel.h"
 #include "previewentry.h"
+#include "syncaction.h"
 
 struct sqlite3;
 struct sqlite3_stmt;
@@ -30,9 +31,7 @@ public:
 	const PreviewEntry* entryForUuid(const uuid_t& uuid);
 
 	bool checkEntriesAgainstCachedPreviews(const ICachedPreviews& cachedPreviews,
-		std::set<uuid_t>& newEntriesUuid);
-	bool checkEntriesAgainstModificationTime(uint64_t modificationTime,
-		std::set<uuid_t>& newEntriesUuid);
+		std::map<uuid_t, SyncAction>& uuidActions);
 
 private:
 	sqlite3_stmt* makeStatement(const char* query);

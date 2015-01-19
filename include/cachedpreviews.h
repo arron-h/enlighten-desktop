@@ -2,6 +2,7 @@
 #define CACHED_PREVIEWS_H
 
 #include "previewentry.h"
+#include <set>
 
 struct sqlite3;
 struct sqlite3_stmt;
@@ -16,10 +17,9 @@ class ICachedPreviews
 public:
 	virtual ~ICachedPreviews() {}
 
-	virtual void previewsChecked() = 0;
-	virtual uint64_t lastCachedTime() const = 0;
 	virtual uint32_t numberOfCachedPreviews() const = 0;
 
+	virtual bool generateProxy(std::set<uuid_t>& entries) const = 0;
 	virtual bool isInCache(const uuid_t& uuid) const = 0;
 	virtual bool markAsCached(const uuid_t& uuid) = 0;
 };
@@ -32,10 +32,9 @@ public:
 
 	bool loadOrCreateDatabase();
 
-	void previewsChecked();
-	uint64_t lastCachedTime() const;
 	uint32_t numberOfCachedPreviews() const;
 
+	bool generateProxy(std::set<uuid_t>& entries) const;
 	bool isInCache(const uuid_t& uuid) const;
 	bool markAsCached(const uuid_t& uuid);
 
@@ -48,7 +47,6 @@ private:
 private:
 	sqlite3* _sqliteDatabase;
 	IEnlightenSettings* _settings;
-	uint64_t _lastChecked;
 };
 } // lib
 } // enlighten

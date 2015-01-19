@@ -116,46 +116,40 @@ const PreviewEntry* PreviewsDatabase::entryForUuid(const uuid_t& uuid)
 }
 
 bool PreviewsDatabase::checkEntriesAgainstCachedPreviews(const ICachedPreviews& cachedPreviews,
-	std::set<uuid_t>& newEntriesUuid)
+	std::map<uuid_t, SyncAction>& uuidActions)
 {
 	const char* query = "SELECT uuid FROM Pyramid";
 	sqlite3_stmt* statement = makeStatement(query);
 	CHECK(statement);
 
-	uuid_t uuid;
+	// Because we need to remove or add a preview, we need to check in both directions
+	// (db > cache and cache > db)
+	std::set<uuid_t> cachedUuids;
+	std::set<uuid_t>::iterator cachedIterator;
+	cachedPreviews.generateProxy(cachedUuids);
+
 	while (sqlite3_step(statement) == SQLITE_ROW)
 	{
-		uuid = reinterpret_cast<const char*>(sqlite3_column_text(statement, 0));
-		if (!cachedPreviews.isInCache(uuid))
+		const char* uuid = reinterpret_cast<const char*>(sqlite3_column_text(statement, 0));
+		cachedIterator = cachedUuids.find(uuid);
+		if (cachedIterator == cachedUuids.end())
 		{
-			newEntriesUuid.insert(uuid);
+			// Uuid not in cache - mark as add
+			uuidActions.insert(std::make_pair(std::string(uuid), SyncAction_Add));
+		}
+		else
+		{
+			// Uuid in cache - do nothing
+			cachedUuids.erase(cachedIterator);
 		}
 	}
 	sqlite3_finalize(statement);
 
-	return true;
-}
-
-bool PreviewsDatabase::checkEntriesAgainstModificationTime(uint64_t modificationTime,
-	std::set<uuid_t>& newEntriesUuid)
-{
-	const char* queryFormat = "SELECT uuid FROM Pyramid WHERE "
-                               "pyramidFileTimeStamp > %lld";
-
-	char queryBuffer[128];
-	int written = snprintf(queryBuffer, 128, queryFormat, modificationTime);
-	VALIDATE(written < 128, "Buffer overflow");
-
-	sqlite3_stmt* statement = makeStatement(queryBuffer);
-	CHECK(statement);
-
-	uuid_t uuid;
-	while (sqlite3_step(statement) == SQLITE_ROW)
+	// Now cachedUuids contains entries from the cache which no longer are in the previews.db
+	for (auto uuid : cachedUuids)
 	{
-		uuid = reinterpret_cast<const char*>(sqlite3_column_text(statement, 0));
-		newEntriesUuid.insert(uuid);
+		uuidActions.insert(std::make_pair(uuid, SyncAction_Remove));
 	}
-	sqlite3_finalize(statement);
 
 	return true;
 }

@@ -16,8 +16,12 @@ namespace
 	class MockSettings : public IEnlightenSettings
 	{
 	public:
-		MOCK_METHOD2(get, const std::string&(IEnlightenSettings::Setting, const std::string& defaultValue));
-		MOCK_METHOD2(set, void(IEnlightenSettings::Setting, const std::string& value));
+		MOCK_METHOD2(get, const std::string&(IEnlightenSettings::Setting, const std::string&));
+		MOCK_METHOD2(get, int32_t(IEnlightenSettings::Setting, int32_t));
+		MOCK_METHOD2(get, double(IEnlightenSettings::Setting, double));
+		MOCK_METHOD2(set, void(IEnlightenSettings::Setting, const std::string&));
+		MOCK_METHOD2(set, void(IEnlightenSettings::Setting, int32_t));
+		MOCK_METHOD2(set, void(IEnlightenSettings::Setting, double));
 	};
 
 	class CachedPreviewsTest : public testing::Test
@@ -25,8 +29,9 @@ namespace
 	public:
 		CachedPreviewsTest()
 		{
-			ON_CALL(settings, get(IEnlightenSettings::CachedDatabasePath, testing::_))
-				.WillByDefault(testing::ReturnRef(CachedPreviewsTest_PathToCachedPreviewsRoot));
+			ON_CALL(settings, get(IEnlightenSettings::CachedDatabasePath,
+				testing::Matcher<const std::string&>(testing::_)))
+					.WillByDefault(testing::ReturnRef(CachedPreviewsTest_PathToCachedPreviewsRoot));
 		}
 
 		~CachedPreviewsTest()
@@ -47,8 +52,9 @@ TEST_F(CachedPreviewsTest, ShouldConstructWithSettings)
 
 TEST_F(CachedPreviewsTest, ShouldCreateDatabaseWhenOneDoesNotExist)
 {
-	EXPECT_CALL(settings, get(IEnlightenSettings::CachedDatabasePath, testing::_))
-		.WillRepeatedly(testing::DoDefault());
+	EXPECT_CALL(settings, get(IEnlightenSettings::CachedDatabasePath,
+		testing::Matcher<const std::string&>(testing::_)))
+			.WillRepeatedly(testing::DoDefault());
 
 	File file(CachedPreviewsTest_PathToCachedPreviewsRoot + CachedPreviews::databaseFileName());
 	EXPECT_FALSE(file.isValid());
@@ -61,8 +67,9 @@ TEST_F(CachedPreviewsTest, ShouldCreateDatabaseWhenOneDoesNotExist)
 
 TEST_F(CachedPreviewsTest, ShouldLoadDatabaseWhenExists)
 {
-	EXPECT_CALL(settings, get(IEnlightenSettings::CachedDatabasePath, testing::_))
-		.WillRepeatedly(testing::DoDefault());
+	EXPECT_CALL(settings, get(IEnlightenSettings::CachedDatabasePath,
+		testing::Matcher<const std::string&>(testing::_)))
+			.WillRepeatedly(testing::DoDefault());
 
 	File file(CachedPreviewsTest_PathToCachedPreviewsRoot + CachedPreviews::databaseFileName());
 	EXPECT_FALSE(file.isValid());
@@ -78,23 +85,11 @@ TEST_F(CachedPreviewsTest, ShouldLoadDatabaseWhenExists)
 	}
 }
 
-TEST_F(CachedPreviewsTest, ShouldStoreAndReturnLastCachedTime)
-{
-	CachedPreviews previews(&settings);
-
-	previews.previewsChecked(); // Mark as checked
-
-	uint64_t lastCached = previews.lastCachedTime();
-	uint64_t timeNow = std::chrono::duration_cast<std::chrono::seconds>(
-		std::chrono::system_clock::now().time_since_epoch()).count();
-
-	EXPECT_EQ(timeNow, lastCached);
-}
-
 TEST_F(CachedPreviewsTest, ShouldMarkPreviewAsCached)
 {
-	EXPECT_CALL(settings, get(IEnlightenSettings::CachedDatabasePath, testing::_))
-		.WillRepeatedly(testing::DoDefault());
+	EXPECT_CALL(settings, get(IEnlightenSettings::CachedDatabasePath,
+		testing::Matcher<const std::string&>(testing::_)))
+			.WillRepeatedly(testing::DoDefault());
 
 	enlighten::lib::uuid_t uuid = "123456-789ABCDEF";
 
@@ -105,8 +100,9 @@ TEST_F(CachedPreviewsTest, ShouldMarkPreviewAsCached)
 
 TEST_F(CachedPreviewsTest, ShouldReturnTrueIfPreviewIsAlreadyCached)
 {
-	EXPECT_CALL(settings, get(IEnlightenSettings::CachedDatabasePath, testing::_))
-		.WillRepeatedly(testing::DoDefault());
+	EXPECT_CALL(settings, get(IEnlightenSettings::CachedDatabasePath,
+		testing::Matcher<const std::string&>(testing::_)))
+			.WillRepeatedly(testing::DoDefault());
 
 	enlighten::lib::uuid_t uuid = "123456-789ABCDEF";
 
@@ -119,8 +115,9 @@ TEST_F(CachedPreviewsTest, ShouldReturnTrueIfPreviewIsAlreadyCached)
 
 TEST_F(CachedPreviewsTest, ShouldReturnFalseIfPreviewNotInCache)
 {
-	EXPECT_CALL(settings, get(IEnlightenSettings::CachedDatabasePath, testing::_))
-		.WillRepeatedly(testing::DoDefault());
+	EXPECT_CALL(settings, get(IEnlightenSettings::CachedDatabasePath,
+		testing::Matcher<const std::string&>(testing::_)))
+			.WillRepeatedly(testing::DoDefault());
 
 	enlighten::lib::uuid_t uuid = "123456-789ABCDEF";
 
@@ -132,8 +129,9 @@ TEST_F(CachedPreviewsTest, ShouldReturnFalseIfPreviewNotInCache)
 
 TEST_F(CachedPreviewsTest, ShouldCacheManyUuids)
 {
-	EXPECT_CALL(settings, get(IEnlightenSettings::CachedDatabasePath, testing::_))
-		.WillRepeatedly(testing::DoDefault());
+	EXPECT_CALL(settings, get(IEnlightenSettings::CachedDatabasePath,
+		testing::Matcher<const std::string&>(testing::_)))
+			.WillRepeatedly(testing::DoDefault());
 
 	enlighten::lib::uuid_t uuid1 = "123456-789ABCDEF";
 	enlighten::lib::uuid_t uuid2 = "56789A-789ABCDEF";
@@ -154,8 +152,9 @@ TEST_F(CachedPreviewsTest, ShouldCacheManyUuids)
 
 TEST_F(CachedPreviewsTest, ShouldReturnNumberOfCachedPreviews)
 {
-	EXPECT_CALL(settings, get(IEnlightenSettings::CachedDatabasePath, testing::_))
-		.WillRepeatedly(testing::DoDefault());
+	EXPECT_CALL(settings, get(IEnlightenSettings::CachedDatabasePath,
+		testing::Matcher<const std::string&>(testing::_)))
+			.WillRepeatedly(testing::DoDefault());
 
 	enlighten::lib::uuid_t uuid1 = "123456-789ABCDEF";
 	enlighten::lib::uuid_t uuid2 = "56789A-789ABCDEF";

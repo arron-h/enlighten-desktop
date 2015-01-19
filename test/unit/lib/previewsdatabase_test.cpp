@@ -7,19 +7,43 @@
 
 using namespace enlighten::lib;
 
-static const char* PreviewsDatabase_ValidPreviewFile =
-	"catalogs/Lightroom 5 Catalog Previews.lrdata/previews.db";
-
-class MockCachedPreviews : public ICachedPreviews
+namespace
 {
-public:
-	MOCK_METHOD0(previewsChecked, void());
-	MOCK_CONST_METHOD0(lastCachedTime, uint64_t());
-	MOCK_CONST_METHOD0(numberOfCachedPreviews, uint32_t());
+	static const char* PreviewsDatabase_ValidPreviewFile =
+		"catalogs/Lightroom 5 Catalog Previews.lrdata/previews.db";
 
-	MOCK_CONST_METHOD1(isInCache, bool(const enlighten::lib::uuid_t&));
-	MOCK_METHOD1(markAsCached, bool(const enlighten::lib::uuid_t&));
-};
+	class MockCachedPreviews : public ICachedPreviews
+	{
+	public:
+		MOCK_CONST_METHOD0(numberOfCachedPreviews, uint32_t());
+
+		MOCK_CONST_METHOD1(generateProxy, bool(std::set<enlighten::lib::uuid_t>&));
+		MOCK_CONST_METHOD1(isInCache, bool(const enlighten::lib::uuid_t&));
+		MOCK_METHOD1(markAsCached, bool(const enlighten::lib::uuid_t&));
+	};
+
+	bool buildMockCache_AddAction(std::set<enlighten::lib::uuid_t>& uuids)
+	{
+		// Mock only 1 uuid in the cache
+		uuids.insert("3829E5FC-7F3F-4B22-94F3-FB5E2C796026");
+	}
+
+	bool buildMockCache_RemoveAction(std::set<enlighten::lib::uuid_t>& uuids)
+	{
+		// These uuids exist in the test data and will be ignored
+		uuids.insert("3829E5FC-7F3F-4B22-94F3-FB5E2C796026");
+		uuids.insert("6A2B9912-3868-45E4-AE0D-7EA73F66FF63");
+		uuids.insert("B089021B-7ACE-4A62-BD32-85A6C6AD5B9C");
+
+		// Mock entries in the cache which don't exist in the test data - this
+		// will trigger 'removals'
+		uuids.insert("3829E5FC");
+		uuids.insert("ABCDEF12");
+		uuids.insert("3456789A");
+
+		return true;
+	}
+}
 
 TEST(PreviewsDatabase, ShouldFailToInitialiseWithAnInvalidFile)
 {
@@ -92,31 +116,44 @@ TEST(PreviewsDatabase, ShouldReturnAPreviewEntryForAValidUuid)
 	EXPECT_EQ(entry->digest(), "07cc63f155500a902b21fef7be6585b5");
 }
 
-TEST(PreviewsDatabase, ShouldReturnEntriesPastSpecificTime)
-{
-	PreviewsDatabase previews;
-	previews.initialiseWithFile(PreviewsDatabase_ValidPreviewFile);
-
-	std::set<enlighten::lib::uuid_t> entries;
-	EXPECT_TRUE(previews.checkEntriesAgainstModificationTime(442191140, entries));
-
-	EXPECT_EQ(2, entries.size());
-}
-
-TEST(PreviewsDatabase, ShouldReturnEntriesNotPresentInCache)
+TEST(PreviewsDatabase, ShouldReturnNewEntriesWithAddAction)
 {
 	PreviewsDatabase previews;
 	previews.initialiseWithFile(PreviewsDatabase_ValidPreviewFile);
 
 	MockCachedPreviews mockCache;
 
-	EXPECT_CALL(mockCache, isInCache(testing::_))
-		.Times(3)
-		.WillOnce(testing::Return(true))
-		.WillRepeatedly(testing::Return(false));
+	EXPECT_CALL(mockCache, generateProxy(testing::_))
+		.Times(1)
+		.WillOnce(testing::Invoke(buildMockCache_AddAction));
 
-	std::set<enlighten::lib::uuid_t> entries;
+	std::map<enlighten::lib::uuid_t, SyncAction> entries;
 	EXPECT_TRUE(previews.checkEntriesAgainstCachedPreviews(mockCache, entries));
 
 	EXPECT_EQ(2, entries.size());
+	for(auto entry : entries)
+	{
+		EXPECT_EQ(SyncAction_Add, entry.second);
+	}
+}
+
+TEST(PreviewsDatabase, ShouldReturnNonExistentOldEntriesWithRemoveAction)
+{
+	PreviewsDatabase previews;
+	previews.initialiseWithFile(PreviewsDatabase_ValidPreviewFile);
+
+	MockCachedPreviews mockCache;
+
+	EXPECT_CALL(mockCache, generateProxy(testing::_))
+		.Times(1)
+		.WillOnce(testing::Invoke(buildMockCache_RemoveAction));
+
+	std::map<enlighten::lib::uuid_t, SyncAction> entries;
+	EXPECT_TRUE(previews.checkEntriesAgainstCachedPreviews(mockCache, entries));
+
+	EXPECT_EQ(3, entries.size());
+	for(auto entry : entries)
+	{
+		EXPECT_EQ(SyncAction_Remove, entry.second);
+	}
 }
