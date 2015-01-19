@@ -134,5 +134,10 @@ uint64_t File::lastModificationTime()
 
 	return static_cast<uint64_t>(lastModTime);
 }
+
+bool File::remove()
+{
+	return unlink(_file.c_str()) == 0;
+}
 } // lib
 } // enlighten

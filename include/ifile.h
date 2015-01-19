@@ -24,6 +24,8 @@ public:
 	virtual bool isValid() = 0;
 
 	virtual bool duplicate(const char* destination) = 0;
+	virtual bool remove() = 0;
+
 	virtual uint64_t lastModificationTime() = 0;
 };
 } // lib

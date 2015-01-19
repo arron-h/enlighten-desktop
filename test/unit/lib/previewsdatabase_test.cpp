@@ -13,11 +13,12 @@ static const char* PreviewsDatabase_ValidPreviewFile =
 class MockCachedPreviews : public ICachedPreviews
 {
 public:
+	MOCK_METHOD0(previewsChecked, void());
 	MOCK_CONST_METHOD0(lastCachedTime, uint64_t());
 	MOCK_CONST_METHOD0(numberOfCachedPreviews, uint32_t());
 
 	MOCK_CONST_METHOD1(isInCache, bool(const enlighten::lib::uuid_t&));
-	MOCK_METHOD1(markAsCached, void(const enlighten::lib::uuid_t&));
+	MOCK_METHOD1(markAsCached, bool(const enlighten::lib::uuid_t&));
 };
 
 TEST(PreviewsDatabase, ShouldFailToInitialiseWithAnInvalidFile)

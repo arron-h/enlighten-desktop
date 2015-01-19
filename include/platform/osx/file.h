@@ -31,6 +31,7 @@ public:
 	bool isValid();
 
 	bool duplicate(const char* destination);
+	bool remove();
 
 	uint64_t lastModificationTime();
 

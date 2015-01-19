@@ -30,6 +30,7 @@ endif ()
 
 ### Include files
 set (LIB_INCLUDE
+	include/cachedpreviews.h
 	include/ifile.h
 	include/jpeg.h
 	include/jpegcruncher.h
@@ -45,6 +46,7 @@ set (LIB_INCLUDE
 set (SQLITE_SOURCE
 	thirdparty/sqlite3/src/sqlite3.c)
 set (LIB_SOURCE
+	src/cachedpreviews.cpp
 	src/jpeg.cpp
 	src/jpegcruncher.cpp
 	src/lrprev.cpp

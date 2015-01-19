@@ -26,6 +26,7 @@ namespace
 		MOCK_METHOD0(isValid, bool());
 
 		MOCK_METHOD1(duplicate, bool(const char*));
+		MOCK_METHOD0(remove, bool());
 		MOCK_METHOD0(lastModificationTime, uint64_t());
 	};
 
