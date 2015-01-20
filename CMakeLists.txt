@@ -42,12 +42,16 @@ set (LIB_INCLUDE
 	include/settings.h
 	include/syncaction.h
 	include/validation.h
-	include/watcher.h)
+	include/watcher.h
+	include/synchronizers/abstractsynchronizer.h
+	include/synchronizers/previewssynchronizer.h)
 
 ### Source files
 set (SQLITE_SOURCE
 	thirdparty/sqlite3/src/sqlite3.c)
 set (LIB_SOURCE
+	src/aws.cpp
+	src/awsrequest.cpp
 	src/cachedpreviews.cpp
 	src/jpeg.cpp
 	src/jpegcruncher.cpp
@@ -57,7 +61,8 @@ set (LIB_SOURCE
 	src/previewentry.cpp
 	src/previewentrylevel.cpp
 	src/settings.cpp
-	src/watcher.cpp)
+	src/watcher.cpp
+	src/synchronizers/previewssynchronizer.cpp)
 set (CLI_SOURCE
 	src/cli.cpp)
 
