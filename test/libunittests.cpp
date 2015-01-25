@@ -10,7 +10,10 @@ class ConsoleLoggerDelegate : public lib::AbstractLoggerDelegate
 public:
 	void processLogMessage(lib::Logger::Severity severity, const char* message)
 	{
-		printf("  %s | %s\n", lib::Logger::stringifySeverity(severity), message);
+		if (severity == lib::Logger::ERROR)
+		{
+			printf("  %s | %s\n", lib::Logger::stringifySeverity(severity), message);
+		}
 	}
 };
 

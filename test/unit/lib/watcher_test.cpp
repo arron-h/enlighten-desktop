@@ -33,7 +33,7 @@ namespace
 	class MockWatcherDelegate : public AbstractWatcherDelegate
 	{
 	public:
-		MOCK_METHOD2(fileHasChanged, void(Watcher*, const IFile*));
+		MOCK_METHOD2(fileHasChanged, bool(Watcher*, const IFile*));
 
 		volatile bool _hasBeenCalled;
 	};
@@ -150,7 +150,8 @@ TEST(WatcherTest, ShouldCallDelegateWhenWatchedFileChanges)
 
 	// Delegate expectations
 	EXPECT_CALL(delegate, fileHasChanged(&watcher, &file))
-		.WillOnce(testing::Assign(&delegate._hasBeenCalled, true));
+		.WillOnce(testing::DoAll(testing::Assign(&delegate._hasBeenCalled, true),
+			testing::Return(true)));
 
 	EXPECT_TRUE(watcher.beginWatchingForChanges(500));
 

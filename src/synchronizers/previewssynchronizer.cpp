@@ -89,12 +89,23 @@ void PreviewsSynchronizer::stopAndCleanup()
 	}
 }
 
-void PreviewsSynchronizer::fileHasChanged(Watcher* watcher, const IFile* file)
+bool PreviewsSynchronizer::fileHasChanged(Watcher* watcher, const IFile* file)
 {
-	if (_workerThread.joinable()) // Skip processing if we're currently working
-		return;
+	auto workerFuture = _workerPromise.get_future();
+	auto status       = workerFuture.wait_for(std::chrono::milliseconds(0));
+
+	if (_workerThread.joinable() && status == std::future_status::ready)
+	{
+		_workerThread.join();
+	}
+	else
+	{
+		return false;
+	}
 
 	processChanges();
+
+	return true;
 }
 
 bool PreviewsSynchronizer::processChanges()
@@ -117,6 +128,7 @@ bool PreviewsSynchronizer::processChanges()
 		Logger::get().log(Logger::INFO, "%u changes found. Processing...", uuidActions->size());
 
 		// Kick off the worker thread
+		_workerPromise = std::promise<bool>();
 		_cancelWorking = false;
 		_workerThread  = std::thread(&PreviewsSynchronizer::crunchAndUpload, this,
 			uuidActions, uuidProcessCallback, errorProcessingCallback);
@@ -130,6 +142,7 @@ void PreviewsSynchronizer::crunchAndUpload(std::map<uuid_t, SyncAction>* entries
 {
 	if (!entries)
 	{
+		_workerPromise.set_value(true);
 		return;
 	}
 
@@ -151,8 +164,10 @@ void PreviewsSynchronizer::crunchAndUpload(std::map<uuid_t, SyncAction>* entries
 			continue;
 		}
 
+		std::string basePath = pathOfPreviewsDatabaseFile();
+
 		LrPrev prev;
-		const std::string& filePath = entry->filePathRelativeToRoot();
+		const std::string& filePath = basePath + entry->filePathRelativeToRoot();
 		if (!prev.initialiseWithFile(filePath.c_str()))
 		{
 			processingErrorCallback(it->first, "Failed to load LrPrev for entry '"+ it->first +"'");
@@ -203,27 +218,46 @@ void PreviewsSynchronizer::crunchAndUpload(std::map<uuid_t, SyncAction>* entries
 		}
 
 		// TODO - in progress!
-		IAwsRequest* request = _aws->createRequestForBucket("");
-		SyncAction action = it->second;
-		switch(action)
+		IAwsRequest* request = _aws->createRequestForProfile("");
+		if (request)
 		{
-			case SyncAction_Add:
-				request->putObject();
-			break;
-			case SyncAction_Remove:
-				request->removeObject();
-			break;
-			case SyncAction_Update:
-			break;
+			Logger::get().log(Logger::INFO, "%s - %d", it->first.c_str(), it->second);
+
+			SyncAction action = it->second;
+			switch(action)
+			{
+				case SyncAction_Add:
+					request->putObject();
+				break;
+				case SyncAction_Remove:
+					request->removeObject();
+				break;
+				case SyncAction_Update:
+				break;
+			}
+			_aws->freeRequest(request);
 		}
-		delete request;
 
 		// Notify done
 		processedUuidCallback(it->first);
 	}
 
+	Logger::get().log(Logger::INFO, "Done crunching");
+
 	// Delete the memory holding the entries
 	delete entries;
+
+	_workerPromise.set_value(true);
+}
+
+std::string PreviewsSynchronizer::pathOfPreviewsDatabaseFile()
+{
+	std::string fullFilePath = _previewsDatabaseFile->filePath();
+	size_t idx = fullFilePath.find_last_of(File::pathSeperator());
+
+	VALIDATE_AND_RETURN("", idx != std::string::npos, "Failed to determine path of '%s'", fullFilePath.c_str());
+
+	return fullFilePath.substr(0, idx+1);
 }
 
 void PreviewsSynchronizer::processedUuid(const uuid_t& uuid)

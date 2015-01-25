@@ -35,6 +35,9 @@ public:
 
 	uint64_t lastModificationTime();
 
+public:
+	static char pathSeperator();
+
 private:
 	enum Mode
 	{

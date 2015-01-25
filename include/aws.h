@@ -5,6 +5,7 @@
 
 #include <string>
 #include <map>
+#include <set>
 
 namespace enlighten
 {
@@ -17,7 +18,8 @@ class IAws
 {
 public:
 	virtual ~IAws() {}
-	virtual IAwsRequest* createRequestForBucket(const std::string& bucketName) = 0;
+	virtual IAwsRequest* createRequestForProfile(const std::string& bucketName) = 0;
+	virtual void freeRequest(IAwsRequest* request) = 0;
 };
 
 class Aws : public IAws
@@ -33,8 +35,9 @@ public:
 public:
 	~Aws();
 
-	bool initialiseBucketWithConfig(const AwsConfig& config);
-	IAwsRequest* createRequestForBucket(const std::string& bucketName);
+	bool initialiseBucketWithProfile(const AwsConfig& config);
+	IAwsRequest* createRequestForProfile(const std::string& bucketName);
+	void freeRequest(IAwsRequest* request);
 
 	static Aws& get();
 
@@ -42,6 +45,7 @@ private:
 	Aws();
 
 	std::map<std::string, AwsRequest::AwsPrivateConfig*> _configs;
+	std::set<IAwsRequest*> _requests;
 };
 } // lib
 } // enlighten

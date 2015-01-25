@@ -4,6 +4,7 @@
 #include "synchronizers/previewssynchronizer.h"
 #include "settings.h"
 #include "file.h"
+#include "aws.h"
 
 #include <cstdio>
 #include <sys/stat.h>
@@ -24,7 +25,8 @@ namespace
 			File duplicatePreviews(SyncPreviewsTest_PreviewsDatabase);
 			EXPECT_TRUE(duplicatePreviews.duplicate(databaseFileName));
 
-			synchronizer = new PreviewsSynchronizer(&settings);
+			Aws aws = Aws::get();
+			synchronizer = new PreviewsSynchronizer(&settings, &aws);
 		}
 
 		~SyncPreviewsTest()

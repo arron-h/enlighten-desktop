@@ -16,7 +16,7 @@ class AbstractWatcherDelegate
 public:
 	virtual ~AbstractWatcherDelegate() {}
 
-	virtual void fileHasChanged(Watcher* watcher, const IFile* file) = 0;
+	virtual bool fileHasChanged(Watcher* watcher, const IFile* file) = 0;
 };
 
 class Watcher

@@ -1,6 +1,8 @@
 #include "aws.h"
 #include "validation.h"
 
+#include <cassert>
+
 namespace enlighten
 {
 namespace lib
@@ -12,6 +14,8 @@ Aws::Aws()
 
 Aws::~Aws()
 {
+	assert(_requests.size() == 0);
+
 	auto it = _configs.begin();
 	for (; it != _configs.end(); it++)
 	{
@@ -25,7 +29,7 @@ Aws& Aws::get()
 	return aws;
 }
 
-bool Aws::initialiseBucketWithConfig(const AwsConfig& config)
+bool Aws::initialiseBucketWithProfile(const AwsConfig& config)
 {
 	AwsRequest::AwsPrivateConfig* privateConfig = new AwsRequest::AwsPrivateConfig;
 	privateConfig->accessKeyId     = config.accessKeyId;
@@ -36,14 +40,25 @@ bool Aws::initialiseBucketWithConfig(const AwsConfig& config)
 	return true;
 }
 
-IAwsRequest* Aws::createRequestForBucket(const std::string& bucketName)
+IAwsRequest* Aws::createRequestForProfile(const std::string& profileName)
 {
-	auto it = _configs.find(bucketName);
+	auto it = _configs.find(profileName);
 
-	VALIDATE_AND_RETURN(nullptr, it != _configs.end(), "Bucket '%s' has not been initialised", bucketName.c_str());
+	VALIDATE_AND_RETURN(nullptr, it != _configs.end(), "Profile '%s' has not been initialised", profileName.c_str());
 
 	AwsRequest* request = new AwsRequest(it->second);
+	_requests.insert(request);
 	return request;
+}
+
+void Aws::freeRequest(IAwsRequest* request)
+{
+	auto it = _requests.find(request);
+	if (it != _requests.end())
+	{
+		delete *it;
+		_requests.erase(it);
+	}
 }
 
 } // lib

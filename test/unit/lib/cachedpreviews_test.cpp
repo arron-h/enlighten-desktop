@@ -168,3 +168,24 @@ TEST_F(CachedPreviewsTest, ShouldReturnNumberOfCachedPreviews)
 
 	EXPECT_EQ(3, previews.numberOfCachedPreviews());
 }
+
+TEST_F(CachedPreviewsTest, ShouldGenerateProxySetForCachedEntries)
+{
+	std::set<enlighten::lib::uuid_t> entries;
+
+	EXPECT_CALL(settings, get(IEnlightenSettings::CachedDatabasePath,
+		testing::Matcher<const std::string&>(testing::_)))
+			.WillRepeatedly(testing::DoDefault());
+
+	enlighten::lib::uuid_t uuid1 = "123456-789ABCDEF";
+	enlighten::lib::uuid_t uuid2 = "56789A-789ABCDEF";
+
+	CachedPreviews previews(&settings);
+	EXPECT_TRUE(previews.loadOrCreateDatabase());
+	EXPECT_TRUE(previews.markAsCached(uuid1));
+	EXPECT_TRUE(previews.markAsCached(uuid2));
+
+	previews.generateProxy(entries);
+
+	EXPECT_EQ(2, entries.size());
+}

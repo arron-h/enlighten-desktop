@@ -8,8 +8,10 @@
 
 #include <thread>
 #include <mutex>
+#include <future>
 #include <functional>
 #include <map>
+#include <string>
 
 namespace enlighten
 {
@@ -35,12 +37,13 @@ public:
 	bool stopSynchronizingFile();
 
 	// WatcherDelegate
-	void fileHasChanged(Watcher* watcher, const IFile* file);
+	bool fileHasChanged(Watcher* watcher, const IFile* file);
 
 private:
 	bool processChanges();
 	void crunchAndUpload(std::map<uuid_t, SyncAction>* entries, SuccessCallbackFunc processedUuidCallback,
 		 ErrorCallbackFunc processingErrorCallback);
+	std::string pathOfPreviewsDatabaseFile();
 
 	void processedUuid(const uuid_t& uuid);
 	void errorProcessingUuid(const uuid_t& uuid, const std::string& error);
@@ -57,9 +60,10 @@ private:
 	IFile* _previewsDatabaseFile;
 
 	std::thread _workerThread;
+	std::promise<bool> _workerPromise;
 	volatile bool _cancelWorking;
 	std::mutex _mutex;
-	
+
 	enum State
 	{
 		Idle,

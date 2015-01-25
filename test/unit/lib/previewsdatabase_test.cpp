@@ -26,6 +26,8 @@ namespace
 	{
 		// Mock only 1 uuid in the cache
 		uuids.insert("3829E5FC-7F3F-4B22-94F3-FB5E2C796026");
+
+		return true;
 	}
 
 	bool buildMockCache_RemoveAction(std::set<enlighten::lib::uuid_t>& uuids)

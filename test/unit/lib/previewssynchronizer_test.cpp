@@ -5,8 +5,11 @@
 #include "awsrequest.h"
 #include "settings.h"
 #include "file.h"
+#include "cachedpreviews.h"
 #include "synchronizers/previewssynchronizer.h"
 #include <chrono>
+
+#include "sqlite3.h"
 
 using namespace enlighten::lib;
 
@@ -24,6 +27,25 @@ namespace
 		MOCK_METHOD0(removeObject, bool());
 	};
 
+	void removeUuidFromDatabaseTable(const char* database, const char* table, const char* uuid)
+	{
+		sqlite3* db;
+		int dbOpenResult = sqlite3_open_v2(database, &db, SQLITE_OPEN_READWRITE, NULL);
+
+		ASSERT_TRUE(dbOpenResult == SQLITE_OK);
+
+		char queryBuffer[128];
+		int written = snprintf(queryBuffer, 128, "DELETE FROM %s WHERE uuid='%s'", table, uuid);
+		ASSERT_TRUE(written < 128);
+
+		sqlite3_stmt* statement = nullptr;
+		int statementResult = sqlite3_prepare_v2(db, queryBuffer, -1, &statement,
+			NULL);
+		ASSERT_TRUE(statementResult == SQLITE_OK);
+
+		ASSERT_TRUE(sqlite3_step(statement) == SQLITE_DONE);
+	}
+
 	class FakeAws : public IAws
 	{
 	public:
@@ -31,9 +53,13 @@ namespace
 		{
 		}
 
-		IAwsRequest* createRequestForBucket(const std::string& bucket)
+		IAwsRequest* createRequestForProfile(const std::string& bucket)
 		{
 			return _mockRequest;
+		}
+
+		void freeRequest(IAwsRequest*)
+		{
 		}
 
 	protected:
@@ -45,6 +71,12 @@ namespace
 	public:
 		PreviewsSynchronizerTest() : fakeAws(&mockAwsRequest)
 		{
+			settings.set(IEnlightenSettings::CachedDatabasePath, "temp/");
+		}
+		~PreviewsSynchronizerTest()
+		{
+			File f(std::string("temp/") + CachedPreviews::databaseFileName());
+			f.remove();
 		}
 
 	protected:
@@ -79,7 +111,7 @@ TEST_F(PreviewsSynchronizerTest, ShouldStartStopSynchronizingFile)
 	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile));
 
 	// Wait around awhile
-	std::this_thread::sleep_for(std::chrono::seconds(3));
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 
 	EXPECT_TRUE(sync.stopSynchronizingFile());
 }
@@ -93,6 +125,7 @@ TEST_F(PreviewsSynchronizerTest, ShouldFailStopSynchronizingFileIfNotStarted)
 
 TEST_F(PreviewsSynchronizerTest, ShouldProcessPreviewsWhenPreviewDatabaseChanges)
 {
+	settings.set(IEnlightenSettings::WatcherPollRate, 100);
 	PreviewsSynchronizer sync(&settings, &fakeAws);
 
 	EXPECT_CALL(mockAwsRequest, putObject())
@@ -100,16 +133,34 @@ TEST_F(PreviewsSynchronizerTest, ShouldProcessPreviewsWhenPreviewDatabaseChanges
 	EXPECT_CALL(mockAwsRequest, removeObject())
 		.Times(1);
 
-	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile));
+	// Duplicate the database, so we can modify it
+	std::string duplicatedDatabaseName = PreviewsSynchronizer_ValidPreviewFile;
+	size_t idx = duplicatedDatabaseName.find_last_of(File::pathSeperator());
+	duplicatedDatabaseName = duplicatedDatabaseName.substr(0, idx+1) +
+		"previewssynchronizer_duplicate.db";
+	{
+		File file(PreviewsSynchronizer_ValidPreviewFile);
+		file.duplicate(duplicatedDatabaseName.c_str());
+	}
+
+	EXPECT_TRUE(sync.beginSynchronizingFile(duplicatedDatabaseName));
 
 	// Wait around awhile
-	std::this_thread::sleep_for(std::chrono::seconds(3));
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 
 	// Inject a change - remove an entry
-	File file(PreviewsSynchronizer_ValidPreviewFile);
-	sync.fileHasChanged(nullptr, &file);
+	removeUuidFromDatabaseTable(duplicatedDatabaseName.c_str(), "ImageCacheEntry",
+		"6A2B9912-3868-45E4-AE0D-7EA73F66FF63");
+	removeUuidFromDatabaseTable(duplicatedDatabaseName.c_str(), "Pyramid",
+		"6A2B9912-3868-45E4-AE0D-7EA73F66FF63");
+
+	// Wait around awhile
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 
 	EXPECT_TRUE(sync.stopSynchronizingFile());
+
+	File file(duplicatedDatabaseName);
+	EXPECT_TRUE(file.remove());
 }
 
 TEST_F(PreviewsSynchronizerTest, ShouldNotProcessPreviewsIfAlreadyProcessing)
@@ -125,5 +176,15 @@ TEST_F(PreviewsSynchronizerTest, ShouldNotProcessPreviewsIfAlreadyProcessing)
 	File file(PreviewsSynchronizer_ValidPreviewFile);
 	sync.fileHasChanged(nullptr, &file);
 
+	// Wait around awhile
+	std::this_thread::sleep_for(std::chrono::seconds(1));
+
 	EXPECT_TRUE(sync.stopSynchronizingFile());
+}
+
+TEST_F(PreviewsSynchronizerTest, WillNotJoinWhenFileChangedDelegateCalledIfNotJoinable)
+{
+	PreviewsSynchronizer sync(&settings, &fakeAws);
+
+	EXPECT_FALSE(sync.fileHasChanged(nullptr, nullptr));
 }

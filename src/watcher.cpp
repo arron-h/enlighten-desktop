@@ -45,15 +45,18 @@ void Watcher::pollForChanges()
 	if (!_shouldPoll)
 		return;
 
-	uint64_t lastModificationTime = static_cast<uint64_t>(-1);
+	uint64_t lastModificationTime = _file->lastModificationTime();
 	while (_shouldPoll)
 	{
 		uint64_t timeCheck = _file->lastModificationTime();
 		if (timeCheck > lastModificationTime)
 		{
-			_delegate->fileHasChanged(this, _file);
+			bool trackChange = _delegate->fileHasChanged(this, _file);
+			if (trackChange)
+			{
+				lastModificationTime = timeCheck;
+			}
 		}
-		lastModificationTime = timeCheck;
 
 		// Don't really want to sleep for the entire poll duration as this will cause
 		// the app to block for pollRate time when shutting down.

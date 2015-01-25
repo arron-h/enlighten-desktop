@@ -69,7 +69,9 @@ bool CachedPreviews::isInCache(const uuid_t& uuid) const
 	int written = snprintf(query, 128, queryFormat, uuid.c_str());
 	VALIDATE(written < 128, "Buffer overflow");
 
-	return executeAndCheckQuery(query, SQLITE_ROW);
+	VALIDATE(executeAndCheckQuery(query, SQLITE_ROW), "Sql result != SQLITE_DONE");
+
+	return true;
 }
 
 bool CachedPreviews::markAsCached(const uuid_t& uuid)
@@ -83,7 +85,9 @@ bool CachedPreviews::markAsCached(const uuid_t& uuid)
 	int written = snprintf(query, 128, queryFormat, uuid.c_str());
 	VALIDATE(written < 128, "Buffer overflow");
 
-	return executeAndCheckQuery(query, SQLITE_DONE);
+	VALIDATE(executeAndCheckQuery(query, SQLITE_DONE), "Sql result != SQLITE_DONE");
+
+	return true;
 }
 
 bool CachedPreviews::generateProxy(std::set<uuid_t>& entries) const
@@ -102,7 +106,7 @@ bool CachedPreviews::generateProxy(std::set<uuid_t>& entries) const
 	VALIDATE_AND_RETURN(nullptr, statementResult == SQLITE_OK, "Statement '%s' error. Reason: %s",
 		query, sqlite3_errmsg(_sqliteDatabase));
 
-	if (sqlite3_step(statement) == SQLITE_ROW)
+	while (sqlite3_step(statement) == SQLITE_ROW)
 	{
 		const char* uuidStr = reinterpret_cast<const char*>(sqlite3_column_text(statement, 0));
 		entries.insert(uuidStr);

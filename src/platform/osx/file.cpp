@@ -139,5 +139,10 @@ bool File::remove()
 {
 	return unlink(_file.c_str()) == 0;
 }
+
+char File::pathSeperator()
+{
+	return '/';
+}
 } // lib
 } // enlighten
