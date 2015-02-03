@@ -1,6 +1,9 @@
 #ifndef SCANNER_H
 #define SCANNER_H
 
+#include <set>
+#include <string>
+
 namespace enlighten
 {
 namespace lib
@@ -8,22 +11,22 @@ namespace lib
 class Scanner
 {
 public:
-	enum FileType
+	struct LightroomFilePair
 	{
-		LRCAT,
-		LRDAT
+		std::string catalog;
+		std::string previews;
 	};
 
-	typedef std::pair<std::string, std::string> LightroomFilePair;
+	typedef std::set<LightroomFilePair> LightroomFilePairs;
 
 public:
 	Scanner();
 
-	bool scanForLightroomFilesAtPath(const char* rootPath,
-		std::vector<LightroomFilePair>& matchingFilePairs);
+	bool scanForLightroomFilesAtPath(const char* rootPath);
+	const LightroomFilePairs& lightroomFilePairs() const;
 
-	void writePairsToSettings(const std::vector<LightroomFilePair>& pairs,
-		EnlightenSettings& settings);
+private:
+	LightroomFilePairs _filePairs;
 };
 } // lib
 } // enlighten
