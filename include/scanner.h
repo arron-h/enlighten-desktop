@@ -15,6 +15,11 @@ public:
 	{
 		std::string catalog;
 		std::string previews;
+
+		bool operator<(const LightroomFilePair& other) const
+		{
+			return catalog < other.catalog && previews < other.previews;
+		}
 	};
 
 	typedef std::set<LightroomFilePair> LightroomFilePairs;
