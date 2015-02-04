@@ -18,8 +18,8 @@ public:
 	virtual bool removeObject() = 0;
 };
 
-class AwsAccessProfile;
-class AwsDestination;
+struct AwsAccessProfile;
+struct AwsDestination;
 class AwsRequest : public IAwsRequest
 {
 public:

@@ -6,7 +6,6 @@ namespace enlighten
 {
 namespace lib
 {
-
 AwsRequest::AwsRequest(const AwsAccessProfile* accessProfile,
 		const AwsDestination* destination) :
 	_accessProfile(accessProfile), _destination(destination)

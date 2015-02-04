@@ -28,6 +28,10 @@ bool Aws::initialiseDestinationWithProfile(
 		const AwsAccessProfile& accessProfile,
 		const AwsDestination& destination)
 {
+	VALIDATE(!accessProfile.accessKeyId.empty(), "No access key provided");
+	VALIDATE(!accessProfile.secretAccessKey.empty(), "No secret access key provided");
+	VALIDATE(!destination.bucket.empty(), "No bucket name provided");
+
 	auto it = _destinations.find(destinationIdentifier);
 	if (it != _destinations.end())
 	{
@@ -42,6 +46,20 @@ bool Aws::initialiseDestinationWithProfile(
 	_destinations.insert(std::make_pair(destinationIdentifier, privateProfile));
 
 	return true;
+}
+
+void Aws::removeDestination(const std::string& destinationIdentifier)
+{
+	auto it = _destinations.find(destinationIdentifier);
+	if (it != _destinations.end())
+	{
+		_destinations.erase(it);
+	}
+}
+
+void Aws::removeAllDestinations()
+{
+	_destinations.clear();
 }
 
 IAwsRequest* Aws::createRequestForDestination(const std::string& destinationIdentifier)

@@ -112,7 +112,9 @@ include_directories (
 	thirdparty/gtest/include)
 
 # Lib unit tests
-file (GLOB LIB_TEST_SOURCES test/unit/lib/*_test.cpp)
+file (GLOB LIB_TEST_SOURCES
+	test/unit/lib/*_test.cpp
+	test/unit/lib/**/*_test.cpp)
 list (APPEND LIB_TEST_SOURCES test/libunittests.cpp)
 set (LIB_UNIT_TEST_NAME     enlighten_lib_unit_tests)
 add_executable (${LIB_UNIT_TEST_NAME} ${LIB_TEST_SOURCES})

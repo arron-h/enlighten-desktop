@@ -41,6 +41,8 @@ public:
 		const std::string& destinationIdentifier,
 		const AwsAccessProfile& accessProfile,
 		const AwsDestination& destination);
+	void removeDestination(const std::string& destinationIdentifier);
+	void removeAllDestinations();
 
 	IAwsRequest* createRequestForDestination(const std::string& destinationIdentifier);
 	void freeRequest(IAwsRequest* request);
