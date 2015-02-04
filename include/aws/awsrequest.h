@@ -18,29 +18,22 @@ public:
 	virtual bool removeObject() = 0;
 };
 
+class AwsAccessProfile;
+class AwsDestination;
 class AwsRequest : public IAwsRequest
 {
 public:
+	AwsRequest(const AwsAccessProfile* accessProfile,
+		const AwsDestination* destination);
+
 	bool headObject();
 	bool getObject();
 	bool putObject();
 	bool removeObject();
 
 private:
-	struct AwsPrivateConfig
-	{
-		std::string accessKeyId;
-		std::string secretAccessKey;
-		std::string region;
-	};
-
-private:
-	AwsRequest(AwsPrivateConfig* config);
-
-private:
-	AwsPrivateConfig* _config;
-
-	friend class Aws;
+	const AwsAccessProfile* _accessProfile;
+	const AwsDestination* _destination;
 };
 } // lib
 } // enlighten

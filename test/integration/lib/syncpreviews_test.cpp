@@ -4,7 +4,7 @@
 #include "synchronizers/previewssynchronizer.h"
 #include "settings.h"
 #include "file.h"
-#include "aws.h"
+#include "aws/aws.h"
 
 #include <cstdio>
 #include <sys/stat.h>
@@ -25,7 +25,11 @@ namespace
 			File duplicatePreviews(SyncPreviewsTest_PreviewsDatabase);
 			EXPECT_TRUE(duplicatePreviews.duplicate(databaseFileName));
 
+			AwsDestination awsDest = { "my-bucket", "" };
+			AwsAccessProfile accessProfile = { "12345", "67890" };
+
 			Aws aws = Aws::get();
+			aws.initialiseDestinationWithProfile("testprofile", accessProfile, awsDest);
 			synchronizer = new PreviewsSynchronizer(&settings, &aws);
 		}
 
@@ -45,7 +49,7 @@ namespace
 
 TEST_F(SyncPreviewsTest, KeepPreviewsSynchronized)
 {
-	EXPECT_TRUE(synchronizer->beginSynchronizingFile(databaseFileName));
+	EXPECT_TRUE(synchronizer->beginSynchronizingFile(databaseFileName, "testprofile"));
 
 	// Wait a little
 	std::this_thread::sleep_for(std::chrono::nanoseconds(1000 * 1000 * 2));

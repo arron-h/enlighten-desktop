@@ -16,7 +16,7 @@ public:
 	virtual ~AbstractSynchronizer() {}
 
 	void setProgressDelegate(AbstractSynchronizerProgressDelegate* delegate) { _delegate = delegate; }
-	virtual bool beginSynchronizingFile(const std::string& file) = 0;
+	virtual bool beginSynchronizingFile(const std::string& file, const std::string& awsDestinationIdentifier) = 0;
 	virtual bool stopSynchronizingFile() = 0;
 
 protected:

@@ -1,8 +1,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-#include "aws.h"
-#include "awsrequest.h"
+#include "aws/aws.h"
+#include "aws/awsrequest.h"
 #include "settings.h"
 #include "file.h"
 #include "cachedpreviews.h"
@@ -53,7 +53,7 @@ namespace
 		{
 		}
 
-		IAwsRequest* createRequestForProfile(const std::string& bucket)
+		IAwsRequest* createRequestForDestination(const std::string& destination)
 		{
 			return _mockRequest;
 		}
@@ -99,7 +99,7 @@ TEST_F(PreviewsSynchronizerTest, ShouldStartAndCancelSynchronizingFile)
 		.Times(0);
 	EXPECT_CALL(mockAwsRequest, removeObject())
 		.Times(0);
-	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile));
+	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile, ""));
 }
 
 TEST_F(PreviewsSynchronizerTest, ShouldStartStopSynchronizingFile)
@@ -108,7 +108,7 @@ TEST_F(PreviewsSynchronizerTest, ShouldStartStopSynchronizingFile)
 
 	EXPECT_CALL(mockAwsRequest, putObject())
 		.Times(3);
-	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile));
+	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile, ""));
 
 	// Wait around awhile
 	std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -143,7 +143,7 @@ TEST_F(PreviewsSynchronizerTest, ShouldProcessPreviewsWhenPreviewDatabaseChanges
 		file.duplicate(duplicatedDatabaseName.c_str());
 	}
 
-	EXPECT_TRUE(sync.beginSynchronizingFile(duplicatedDatabaseName));
+	EXPECT_TRUE(sync.beginSynchronizingFile(duplicatedDatabaseName, ""));
 
 	// Wait around awhile
 	std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -170,7 +170,7 @@ TEST_F(PreviewsSynchronizerTest, ShouldNotProcessPreviewsIfAlreadyProcessing)
 	EXPECT_CALL(mockAwsRequest, putObject())
 		.Times(3);
 
-	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile));
+	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile, ""));
 
 	// Inject a change
 	File file(PreviewsSynchronizer_ValidPreviewFile);

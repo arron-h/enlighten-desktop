@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <vector>
 #include "settings.h"
-#include "aws.h"
+#include "aws/aws.h"
 #include "logger.h"
 #include "scanner.h"
 #include "synchronizers/previewssynchronizer.h"
@@ -34,12 +34,12 @@ void printUsage(const char* arg0)
 {
 	puts("Enlighten Desktop | Development CLI");
 	puts("Usage:");
-	printf("\t%s <path/to/lightroom_files/>\n", arg0);
+	printf("\t%s <path/to/lightroom_files/> <aws_destination_identifier>\n", arg0);
 }
 
 int main(int argc, char* argv[])
 {
-	if (argc <= 1)
+	if (argc <= 2)
 	{
 		printUsage(argv[0]);
 		return -1;
@@ -52,6 +52,7 @@ int main(int argc, char* argv[])
 	lib::Logger::get().setLoggerDelegate(&logger);
 
 	char* filePath = argv[1];
+	char* awsDestination = argv[2];
 
 	lib::EnlightenSettings settings;
 	lib::Aws& aws = lib::Aws::get();
@@ -73,7 +74,7 @@ int main(int argc, char* argv[])
 		lib::Logger::get().log(lib::Logger::INFO, "Synchronizing '%s'", previews.c_str());
 
 		lib::PreviewsSynchronizer* previewsSync = new lib::PreviewsSynchronizer(&settings, &aws);
-		if (previewsSync->beginSynchronizingFile(previews))
+		if (previewsSync->beginSynchronizingFile(previews, awsDestination))
 		{
 			synchronizers.push_back(previewsSync);
 		}

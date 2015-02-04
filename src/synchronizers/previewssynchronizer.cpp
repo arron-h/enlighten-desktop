@@ -6,7 +6,7 @@
 #include "jpeg.h"
 #include "file.h"
 #include "settings.h"
-#include "aws.h"
+#include "aws/aws.h"
 #include "logger.h"
 
 #include "validation.h"
@@ -35,7 +35,8 @@ PreviewsSynchronizer::~PreviewsSynchronizer()
 	delete _cachedPreviews;
 }
 
-bool PreviewsSynchronizer::beginSynchronizingFile(const std::string& file)
+bool PreviewsSynchronizer::beginSynchronizingFile(const std::string& file,
+	const std::string& awsDestinationIdentifier)
 {
 	VALIDATE(_state != Synchronizing, "Already in a synchronizing state");
 
@@ -43,6 +44,7 @@ bool PreviewsSynchronizer::beginSynchronizingFile(const std::string& file)
 	CHECK(_cachedPreviews->loadOrCreateDatabase());
 
 	_previewsDatabaseFile = new File(file);
+	_awsDestinationIdentifier = awsDestinationIdentifier;
 
 	int32_t pollRate = _settings->get(IEnlightenSettings::WatcherPollRate, 5000);
 	_watcher = new Watcher(_previewsDatabaseFile, this);
@@ -218,7 +220,7 @@ void PreviewsSynchronizer::crunchAndUpload(std::map<uuid_t, SyncAction>* entries
 		}
 
 		// TODO - in progress!
-		IAwsRequest* request = _aws->createRequestForProfile("");
+		IAwsRequest* request = _aws->createRequestForDestination(_awsDestinationIdentifier);
 		if (request)
 		{
 			Logger::get().log(Logger::INFO, "%s - %d", it->first.c_str(), it->second);

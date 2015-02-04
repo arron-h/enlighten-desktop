@@ -1,0 +1,36 @@
+{
+	"accessProfiles":
+	{
+		"ExampleProfile1":
+		{
+			"accessKeyId": "12345",
+			"secretAccessKey": "567890"
+		},
+		"ExampleProfile2":
+		{
+			"accessKeyId": "abcdef",
+			"secretAccessKey": "ghijkl"
+		}
+	},
+	"destinations":
+	{
+		"ExampleDestination1":
+		{
+			"profile": "ExampleProfile1",
+			"bucket": "my-photos",
+			"key": "nested/key"
+		},
+		"ExampleDestination2":
+		{
+			"profile": "ExampleProfile1",
+			"bucket": "client-photos",
+			"key": "clients/james"
+		},
+		"ExampleDestination3":
+		{
+			"profile": "ExampleProfile2",
+			"bucket": "family-photos",
+			"key": ""
+		}
+	}
+}
