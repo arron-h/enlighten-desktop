@@ -36,6 +36,12 @@ bool Scanner::scanForLightroomFilesAtPath(const char* rootPath)
 		Unknown
 	};
 
+	std::string basePath = rootPath;
+	if (basePath.find_last_of(File::pathSeperator()) == std::string::npos)
+	{
+		basePath += File::pathSeperator();
+	}
+
 	while ((directoryEntry = readdir(dir)), dir != NULL && directoryEntry != NULL)
 	{
 		const char* entryName    = directoryEntry->d_name;
@@ -58,12 +64,23 @@ bool Scanner::scanForLightroomFilesAtPath(const char* rootPath)
 		{
 			// Get a displayable name
 			std::string fileName = entryName;
+
+			// Strip path
 			size_t lastSeperatorIdx = fileName.find_last_of(File::pathSeperator());
 			if (lastSeperatorIdx != std::string::npos)
 			{
 				fileName = fileName.substr(lastSeperatorIdx);
 			}
+
+			// Strip extension
 			fileName = fileName.substr(0, extensionPtr - entryName);
+
+			// Strip 'Previews' from lrdata
+			size_t previewsIdentIdx = fileName.rfind("Previews"); // TODO - localise
+			if (previewsIdentIdx != std::string::npos)
+			{
+				fileName = fileName.substr(0, previewsIdentIdx-1);
+			}
 
 			auto it = pairs.find(fileName);
 			if (it == pairs.end())
@@ -72,13 +89,14 @@ bool Scanner::scanForLightroomFilesAtPath(const char* rootPath)
 				it = insertion.first;
 			}
 
+
 			switch (fileType)
 			{
 				case LrCat:
-					it->second.catalog = entryName;
+					it->second.catalog = basePath + entryName;
 					break;
 				case Preview:
-					it->second.previews = entryName;
+					it->second.previews = basePath + entryName + File::pathSeperator() + "previews.db"; // TODO -localise
 					break;
 				default:
 					Logger::get().log(Logger::ERROR, "Invalid file type for file '%s'", entryName);
@@ -91,10 +109,8 @@ bool Scanner::scanForLightroomFilesAtPath(const char* rootPath)
 	// Copy to the set
 	for (auto filePair : pairs)
 	{
-		LightroomFilePair p = filePair.second;
-
-		LightroomFilePair pairlol;
-		_filePairs.insert(pairlol);
+		LightroomFilePair& p = filePair.second;
+		_filePairs.insert(p);
 	}
 
 	return pairs.size() > 0;

@@ -1,43 +1,101 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "lrprev.h"
+#include <vector>
+#include "settings.h"
+#include "aws.h"
 #include "logger.h"
+#include "scanner.h"
+#include "synchronizers/previewssynchronizer.h"
+
+#include <thread>
 
 using namespace enlighten;
 
-class ConsoleLoggerDelegate : public lib::AbstractLoggerDelegate
+namespace
 {
-public:
-	void processLogMessage(lib::Logger::Severity severity, const char* message)
+	volatile sig_atomic_t applicationSignalStatus = 0;
+
+	class ConsoleLoggerDelegate : public lib::AbstractLoggerDelegate
 	{
-		printf("  %s | %s\n", lib::Logger::stringifySeverity(severity), message);
+	public:
+		void processLogMessage(lib::Logger::Severity severity, const char* message)
+		{
+			printf("  %s | %s\n", lib::Logger::stringifySeverity(severity), message);
+		}
+	};
+
+	void applicationSignalHandler(int signal)
+	{
+		applicationSignalStatus = signal;
 	}
-};
+}
+
+void printUsage(const char* arg0)
+{
+	puts("Enlighten Desktop | Development CLI");
+	puts("Usage:");
+	printf("\t%s <path/to/lightroom_files/>\n", arg0);
+}
 
 int main(int argc, char* argv[])
 {
-	if (argc <= 2)
+	if (argc <= 1)
+	{
+		printUsage(argv[0]);
 		return -1;
+	}
 
-	char* filePath = argv[1];
-	char* outputPath = argv[2];
+	signal(SIGINT, applicationSignalHandler);
+	signal(SIGTERM, applicationSignalHandler);
 
 	ConsoleLoggerDelegate logger;
 	lib::Logger::get().setLoggerDelegate(&logger);
 
-	lib::LrPrev lrPrevFile;
-	if (!lrPrevFile.initialiseWithFile(filePath))
-		return -1;
+	char* filePath = argv[1];
 
-	unsigned int  jpegByteCount  = 0;
-	unsigned char* jpegBytes = lrPrevFile.extractFromLevel(3, jpegByteCount);
+	lib::EnlightenSettings settings;
+	lib::Aws& aws = lib::Aws::get();
 
-	// Write out the bytes
-	FILE* outputFile = fopen(outputPath, "wb");
-	fwrite(jpegBytes, 1, jpegByteCount, outputFile);
-	fclose(outputFile);
+	lib::Scanner scanner;
+	if (!scanner.scanForLightroomFilesAtPath(filePath))
+	{
+		lib::Logger::get().log(lib::Logger::ERROR, "Failed to find a valid Lightroom file pair");
+		return 1;
+	}
 
-	free(jpegBytes);
+	std::vector<lib::AbstractSynchronizer*> synchronizers;
+
+	const lib::Scanner::LightroomFilePairs& filePairs = scanner.lightroomFilePairs();
+	for (auto it = filePairs.begin(); it != filePairs.end(); it++)
+	{
+		const std::string& previews = it->previews;
+
+		lib::Logger::get().log(lib::Logger::INFO, "Synchronizing '%s'", previews.c_str());
+
+		lib::PreviewsSynchronizer* previewsSync = new lib::PreviewsSynchronizer(&settings, &aws);
+		if (previewsSync->beginSynchronizingFile(previews))
+		{
+			synchronizers.push_back(previewsSync);
+		}
+		else
+		{
+			delete previewsSync;
+		}
+	}
+
+	while (synchronizers.size() > 0 && applicationSignalStatus == 0)
+	{
+		std::this_thread::yield();
+	}
+
+	lib::Logger::get().log(lib::Logger::INFO, "Cleaning up %d synchronizers", synchronizers.size());
+
+	// Cleanup
+	for (int syncIdx = 0; syncIdx < synchronizers.size(); ++syncIdx)
+	{
+		delete synchronizers[syncIdx];
+		synchronizers[syncIdx] = nullptr;
+	}
 
 	return 0;
 };

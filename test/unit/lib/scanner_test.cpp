@@ -41,6 +41,9 @@ TEST(ScannerTest, ShouldRetrieveFilePairs)
 	const Scanner::LightroomFilePairs& pairs = scanner.lightroomFilePairs();
 	EXPECT_GE(pairs.size(), 1);
 
+	EXPECT_FALSE(pairs.begin()->catalog.length() == 0);
+	EXPECT_FALSE(pairs.begin()->previews.length() == 0);
+
 	// TODO Do a regex match for extension
 	//EXPECT_EQ(pairs.begin()->catalog, );
 	//EXPECT_EQ(pairs.begin()->previews, );
