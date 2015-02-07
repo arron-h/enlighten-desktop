@@ -2,6 +2,7 @@
 #include "gtest/gtest.h"
 
 #include "synchronizers/previewssynchronizer.h"
+#include "cachedpreviews.h"
 #include "settings.h"
 #include "file.h"
 #include "aws/aws.h"
@@ -21,14 +22,21 @@ namespace
 	public:
 		SyncPreviewsTest()
 		{
+			// Purge the cache file
+			File f(CachedPreviews::databaseFileName());
+			f.remove();
+
 			// Duplicate the test database, to make these tests standalone
 			File duplicatePreviews(SyncPreviewsTest_PreviewsDatabase);
 			EXPECT_TRUE(duplicatePreviews.duplicate(databaseFileName));
 
 			AwsDestination awsDest = { "my-bucket", "" };
 			AwsAccessProfile accessProfile = { "12345", "67890" };
+			AwsConfig config;
+			config.hostName = "http://localhost:5678";
 
-			Aws aws = Aws::get();
+			Aws& aws = Aws::get();
+			aws.initialise(config);
 			aws.initialiseDestinationWithProfile("testprofile", accessProfile, awsDest);
 			synchronizer = new PreviewsSynchronizer(&settings, &aws);
 		}
@@ -39,6 +47,8 @@ namespace
 			EXPECT_TRUE(duplicatePreviews.remove());
 
 			delete synchronizer;
+
+			Aws::get().shutdown();
 		}
 
 		const char* databaseFileName = "temp/SyncPreviewsTest_previews.db";
@@ -49,10 +59,10 @@ namespace
 
 TEST_F(SyncPreviewsTest, KeepPreviewsSynchronized)
 {
-	EXPECT_TRUE(synchronizer->beginSynchronizingFile(databaseFileName, "testprofile"));
+	EXPECT_TRUE(synchronizer->beginSynchronizingFile(SyncPreviewsTest_PreviewsDatabase, "testprofile"));
 
 	// Wait a little
-	std::this_thread::sleep_for(std::chrono::nanoseconds(1000 * 1000 * 2));
+	std::this_thread::sleep_for(std::chrono::seconds(10));
 
 	// Modify the copy database
 }

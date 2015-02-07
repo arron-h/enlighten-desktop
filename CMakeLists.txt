@@ -17,10 +17,14 @@ endif ()
 find_package (JPEG REQUIRED)
 list (APPEND DEPENDENCY_LIBS ${JPEG_LIBRARIES})
 
+find_package (CURL REQUIRED)
+list (APPEND DEPENDENCY_LIBS ${CURL_LIBRARIES})
+
 ### Global options and flags
 include_directories (
 	include
 	thirdparty/sqlite3/include
+	thirdparty/rapidjson/include
 	${JPEG_INCLUDE_DIR})
 
 list (APPEND CMAKE_CXX_FLAGS "-std=c++11")

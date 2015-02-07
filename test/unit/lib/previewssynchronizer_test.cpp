@@ -21,10 +21,16 @@ namespace
 	class MockAwsRequest : public IAwsRequest
 	{
 	public:
-		MOCK_METHOD0(headObject, bool());
-		MOCK_METHOD0(getObject, bool());
-		MOCK_METHOD0(putObject, bool());
-		MOCK_METHOD0(removeObject, bool());
+		MOCK_METHOD1(headObject, bool(const std::string& key));
+		MOCK_METHOD2(getObject, bool(const std::string& key, AwsGet& get));
+		MOCK_METHOD2(putObject, bool(const std::string& key, const AwsPut& put));
+		MOCK_METHOD1(removeObject, bool(const std::string& key));
+
+		MOCK_METHOD0(cancel, void());
+		MOCK_METHOD0(reset, void());
+
+		MOCK_METHOD0(response, const AwsResponse*());
+		MOCK_METHOD0(statusCode, int32_t());
 	};
 
 	void removeUuidFromDatabaseTable(const char* database, const char* table, const char* uuid)
@@ -95,9 +101,9 @@ TEST_F(PreviewsSynchronizerTest, ShouldStartAndCancelSynchronizingFile)
 {
 	PreviewsSynchronizer sync(&settings, &fakeAws);
 
-	EXPECT_CALL(mockAwsRequest, putObject())
+	EXPECT_CALL(mockAwsRequest, putObject(testing::_, testing::_))
 		.Times(0);
-	EXPECT_CALL(mockAwsRequest, removeObject())
+	EXPECT_CALL(mockAwsRequest, removeObject(testing::_))
 		.Times(0);
 	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile, ""));
 }
@@ -106,7 +112,7 @@ TEST_F(PreviewsSynchronizerTest, ShouldStartStopSynchronizingFile)
 {
 	PreviewsSynchronizer sync(&settings, &fakeAws);
 
-	EXPECT_CALL(mockAwsRequest, putObject())
+	EXPECT_CALL(mockAwsRequest, putObject(testing::_, testing::_))
 		.Times(3);
 	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile, ""));
 
@@ -128,9 +134,9 @@ TEST_F(PreviewsSynchronizerTest, ShouldProcessPreviewsWhenPreviewDatabaseChanges
 	settings.set(IEnlightenSettings::WatcherPollRate, 100);
 	PreviewsSynchronizer sync(&settings, &fakeAws);
 
-	EXPECT_CALL(mockAwsRequest, putObject())
+	EXPECT_CALL(mockAwsRequest, putObject(testing::_, testing::_))
 		.Times(3);
-	EXPECT_CALL(mockAwsRequest, removeObject())
+	EXPECT_CALL(mockAwsRequest, removeObject(testing::_))
 		.Times(1);
 
 	// Duplicate the database, so we can modify it
@@ -167,7 +173,7 @@ TEST_F(PreviewsSynchronizerTest, ShouldNotProcessPreviewsIfAlreadyProcessing)
 {
 	PreviewsSynchronizer sync(&settings, &fakeAws);
 
-	EXPECT_CALL(mockAwsRequest, putObject())
+	EXPECT_CALL(mockAwsRequest, putObject(testing::_, testing::_))
 		.Times(3);
 
 	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile, ""));

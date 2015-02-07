@@ -225,18 +225,39 @@ void PreviewsSynchronizer::crunchAndUpload(std::map<uuid_t, SyncAction>* entries
 		{
 			Logger::get().log(Logger::INFO, "%s - %d", it->first.c_str(), it->second);
 
+			std::string key = entry->filePathRelativeToRoot();
+
 			SyncAction action = it->second;
 			switch(action)
 			{
 				case SyncAction_Add:
-					request->putObject();
-				break;
+				{
+					AwsPut put;
+
+					uint32_t compressedSize;
+					put.data = targetJpeg.compressedData(compressedSize);
+					put.dataSize = compressedSize;
+
+					request->putObject(key, put);
+					break;
+				}
 				case SyncAction_Remove:
-					request->removeObject();
-				break;
+				{
+					request->removeObject(key);
+					break;
+				}
 				case SyncAction_Update:
-				break;
+				{
+					break;
+				}
 			}
+
+			if (request->statusCode() != 200)
+			{
+				Logger::get().log(Logger::ERROR, "Request failed! Status code: %u",
+					request->statusCode());
+			}
+
 			_aws->freeRequest(request);
 		}
 

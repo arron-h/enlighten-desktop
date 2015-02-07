@@ -1,6 +1,8 @@
 #include "aws/aws.h"
 #include "validation.h"
 
+#include <curl/curl.h>
+
 #include <cassert>
 
 namespace enlighten
@@ -15,12 +17,33 @@ Aws::Aws()
 Aws::~Aws()
 {
 	assert(_requests.size() == 0);
+	assert(_initialised == false);
 }
 
 Aws& Aws::get()
 {
 	static Aws aws;
 	return aws;
+}
+
+bool Aws::initialise(const AwsConfig& config)
+{
+	_config = config;
+
+	if (_initialised)
+		return true;
+
+	VALIDATE(curl_global_init(CURL_GLOBAL_DEFAULT) == 0, "Failed to initialise Curl");
+	_initialised = true;
+
+	return true;
+}
+
+void Aws::shutdown()
+{
+	curl_global_cleanup();
+
+	_initialised = false;
 }
 
 bool Aws::initialiseDestinationWithProfile(
@@ -70,7 +93,7 @@ IAwsRequest* Aws::createRequestForDestination(const std::string& destinationIden
 		"Destination '%s' has not been initialised", destinationIdentifier.c_str());
 
 	const AwsPrivateProfile& profile = it->second;
-	AwsRequest* request = new AwsRequest(&profile.accessProfile, &profile.destination);
+	AwsRequest* request = new AwsRequest(&_config, &profile.accessProfile, &profile.destination);
 	_requests.insert(request);
 	return request;
 }

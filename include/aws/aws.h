@@ -11,6 +11,11 @@ namespace enlighten
 {
 namespace lib
 {
+struct AwsConfig
+{
+	std::string hostName;
+};
+
 struct AwsAccessProfile
 {
 	std::string accessKeyId;
@@ -37,6 +42,9 @@ class Aws : public IAws
 public:
 	~Aws();
 
+	bool initialise(const AwsConfig& config);
+	void shutdown();
+
 	bool initialiseDestinationWithProfile(
 		const std::string& destinationIdentifier,
 		const AwsAccessProfile& accessProfile,
@@ -51,6 +59,9 @@ public:
 
 private:
 	Aws();
+
+	bool _initialised;
+	AwsConfig _config;
 
 	std::set<IAwsRequest*> _requests;
 
