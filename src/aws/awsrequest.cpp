@@ -7,6 +7,7 @@
 #include <regex>
 #include <cstdlib>
 #include <cassert>
+#include <cstring>
 
 namespace enlighten
 {
