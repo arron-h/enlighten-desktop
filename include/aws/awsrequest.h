@@ -17,6 +17,7 @@ struct AwsResponse
 	uint64_t bodySize;
 
 	AwsResponse() : contentLength(0), body(nullptr), bodySize(0) {}
+	void dumpBodyToTTY();
 };
 
 struct AwsGet
@@ -56,6 +57,17 @@ class AwsRequestPrivate;
 class AwsRequest : public IAwsRequest
 {
 public:
+	enum RequestState
+	{
+		StateIdle,
+		StateOpening,
+		StateCancelled,
+		StateReceiving,
+		StateTransferring,
+		StateComplete
+	};
+
+public:
 	AwsRequest(const AwsConfig* config,
 		const AwsAccessProfile* accessProfile,
 		const AwsDestination* destination);
@@ -68,6 +80,7 @@ public:
 
 	void cancel();
 	void reset();
+	RequestState state();
 
 	const AwsResponse* response();
 	int32_t statusCode();
@@ -79,22 +92,24 @@ private:
 	static size_t readCallback(char *buffer, size_t size, size_t nitems, void *userdata);
 	static size_t writeCallback(char *ptr, size_t size, size_t nmemb, void *userdata);
 	static size_t headerCallback(char *ptr, size_t size, size_t nmemb, void *userdata);
+	static size_t progressCallback(void *clientp, uint64_t dltotal, uint64_t dlnow, uint64_t ultotal, uint64_t ulnow);
 
-	bool performRequest();
+	bool performRequest(long expectedStatusCode);
 
 	bool prepareRequest(const std::string& key);
 	std::string prepareUrl(const std::string& key);
-	void prepareHeaders(const char* httpVerb, const std::string* contentType,
-			const std::string* md5Digest, const std::string& key);
+	bool prepareHeaders(const char* httpVerb, const std::string* contentType,
+			const uint8_t* md5Digest, const std::string& key);
 
-	std::string calculateEncodedMd5(const AwsPut& put);
+	void calculateMd5(const AwsPut& put, uint8_t* digest);
 	std::string generateAuthenticationSignature(const char* httpVerb,
-			const std::string* contentType, const std::string* md5Digest,
+			const std::string* contentType, const uint8_t* md5Digest,
 			const std::string& key);
 
 	int32_t onRequest(char *buffer, size_t size, size_t nitems);
 	int32_t onResponse(char *ptr, size_t size, size_t nmemb);
 	int32_t onHeader(char *ptr, size_t size, size_t nmemb);
+	int32_t onProgress(uint64_t dltotal, uint64_t dlnow, uint64_t ultotal, uint64_t ulnow);
 
 	const AwsConfig* _config;
 	const AwsAccessProfile* _accessProfile;
@@ -102,7 +117,7 @@ private:
 
 	AwsRequestPrivate* _privateImpl;
 	AwsResponse _response;
-	int32_t _statusCode;
+	long _statusCode;
 
 	volatile bool _cancel;
 
@@ -113,15 +128,7 @@ private:
 	AwsGet* _currentWriteData;
 	uint64_t _receivedData;
 
-	enum
-	{
-		StateIdle,
-		StateOpening,
-		StateCancelled,
-		StateReceiving,
-		StateTransferring,
-		StateComplete
-	} _state;
+	RequestState _state;
 };
 } // lib
 } // enlighten

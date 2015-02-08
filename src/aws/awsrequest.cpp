@@ -28,6 +28,12 @@ namespace enlighten
 {
 namespace lib
 {
+void AwsResponse::dumpBodyToTTY()
+{
+	std::string stringBody(reinterpret_cast<const char*>(body), bodySize);
+	puts(stringBody.c_str());
+}
+
 class AwsRequestPrivate
 {
 public:
@@ -88,6 +94,8 @@ AwsRequest::~AwsRequest()
 
 bool AwsRequest::headObject(const std::string& key)
 {
+	VALIDATE(_state == StateIdle, "Request is not in an idle state");
+
 	std::string url = prepareUrl(key);
 	Logger::get().log(Logger::INFO, "HEAD %s", url.c_str());
 	VALIDATE(prepareRequest(url), "Failed to prepare HEAD request");
@@ -95,16 +103,18 @@ bool AwsRequest::headObject(const std::string& key)
 	CURL* handle = _privateImpl->curlHandle;
 	CHECK(handle)
 
-	prepareHeaders("HEAD", nullptr, nullptr, key);
+	CHECK(prepareHeaders("HEAD", nullptr, nullptr, key));
 
 	curl_easy_setopt(handle, CURLOPT_NOBODY, 1l);
 	curl_easy_setopt(handle, CURLOPT_HTTPGET, 1l);
 
-	return performRequest();
+	return performRequest(200);
 }
 
 bool AwsRequest::getObject(const std::string& key, AwsGet& get)
 {
+	VALIDATE(_state == StateIdle, "Request is not in an idle state");
+
 	std::string url = prepareUrl(key);
 	Logger::get().log(Logger::INFO, "GET %s", url.c_str());
 	VALIDATE(prepareRequest(url), "Failed to prepare GET request");
@@ -118,11 +128,11 @@ bool AwsRequest::getObject(const std::string& key, AwsGet& get)
 	_receivedData = 0l;
 	_currentWriteData = &get;
 
-	prepareHeaders("GET", nullptr, nullptr, key);
+	CHECK(prepareHeaders("GET", nullptr, nullptr, key));
 
 	curl_easy_setopt(handle, CURLOPT_HTTPGET, 1l);
 
-	bool success = performRequest();
+	bool success = performRequest(200);
 	_currentWriteData = nullptr;
 
 	return success;
@@ -130,6 +140,8 @@ bool AwsRequest::getObject(const std::string& key, AwsGet& get)
 
 bool AwsRequest::putObject(const std::string& key, const AwsPut& put)
 {
+	VALIDATE(_state == StateIdle, "Request is not in an idle state");
+
 	std::string url = prepareUrl(key);
 	Logger::get().log(Logger::INFO, "PUT %s", url.c_str());
 	VALIDATE(prepareRequest(url), "Failed to prepare PUT request");
@@ -140,16 +152,17 @@ bool AwsRequest::putObject(const std::string& key, const AwsPut& put)
 	_transferredData = 0l;
 	_currentReadData = &put;
 
+	uint8_t md5Digest[MD5_DIGEST_LENGTH];
 	std::string contentType("application/octet-stream");
-	std::string md5Digest = calculateEncodedMd5(put);
-	prepareHeaders("PUT", &contentType, &md5Digest, key);
+	calculateMd5(put, md5Digest);
+	CHECK(prepareHeaders("PUT", &contentType, md5Digest, key));
 
 	curl_easy_setopt(handle, CURLOPT_UPLOAD, 1l);
 	curl_easy_setopt(handle, CURLOPT_PUT, 1l);
 	curl_easy_setopt(handle, CURLOPT_INFILESIZE_LARGE,
 		static_cast<curl_off_t>(put.dataSize));
 
-	bool success = performRequest();
+	bool success = performRequest(200);
 	_currentReadData = nullptr;
 
 	return success;
@@ -157,6 +170,8 @@ bool AwsRequest::putObject(const std::string& key, const AwsPut& put)
 
 bool AwsRequest::removeObject(const std::string& key)
 {
+	VALIDATE(_state == StateIdle, "Request is not in an idle state");
+
 	std::string url = prepareUrl(key);
 	Logger::get().log(Logger::INFO, "DELETE %s", url.c_str());
 	VALIDATE(prepareRequest(url), "Failed to prepare DELETE request");
@@ -164,11 +179,11 @@ bool AwsRequest::removeObject(const std::string& key)
 	CURL* handle = _privateImpl->curlHandle;
 	CHECK(handle)
 
-	prepareHeaders("DELETE", nullptr, nullptr, key);
+	CHECK(prepareHeaders("DELETE", nullptr, nullptr, key));
 
 	curl_easy_setopt(handle, CURLOPT_CUSTOMREQUEST, "DELETE");
 
-	return performRequest();
+	return performRequest(204);
 }
 
 void AwsRequest::cancel()
@@ -196,6 +211,8 @@ void AwsRequest::reset()
 	_currentReadData = nullptr;
 	_receivedData = 0l;
 	_transferredData = 0l;
+
+	_privateImpl->reset();
 }
 
 const AwsResponse* AwsRequest::response()
@@ -221,12 +238,11 @@ std::string AwsRequest::prepareUrl(const std::string& key)
 	return url;
 }
 
-bool AwsRequest::performRequest()
+bool AwsRequest::performRequest(long expectedStatusCode)
 {
 	CURL* handle = _privateImpl->curlHandle;
 
 	CURLcode performResult = curl_easy_perform(handle);
-	curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &_statusCode);
 
 	if (_cancel)
 	{
@@ -240,9 +256,16 @@ bool AwsRequest::performRequest()
 			curl_easy_strerror(performResult));
 	}
 
+	curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &_statusCode);
 	_state = StateComplete;
 
-	return performResult == CURLE_OK;
+	if (_statusCode != expectedStatusCode)
+	{
+		Logger::get().log(Logger::ERROR, "Unexpected status code. Expected: %ld got: %ld",
+				expectedStatusCode, _statusCode);
+	}
+
+	return performResult == CURLE_OK && _statusCode == expectedStatusCode;
 }
 
 bool AwsRequest::prepareRequest(const std::string& url)
@@ -255,7 +278,6 @@ bool AwsRequest::prepareRequest(const std::string& url)
 	if (_state != StateIdle)
 	{
 		reset();
-		_privateImpl->reset();
 		_privateImpl->prepareHandle();
 	}
 
@@ -263,18 +285,21 @@ bool AwsRequest::prepareRequest(const std::string& url)
 	_state = StateOpening;
 
 	curl_easy_setopt(curlHandle, CURLOPT_URL, url.c_str());
+	curl_easy_setopt(curlHandle, CURLOPT_NOPROGRESS, 0);
 	curl_easy_setopt(curlHandle, CURLOPT_READFUNCTION, readCallback);
 	curl_easy_setopt(curlHandle, CURLOPT_READDATA, this);
 	curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, writeCallback);
 	curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA , this);
 	curl_easy_setopt(curlHandle, CURLOPT_HEADERFUNCTION, headerCallback);
 	curl_easy_setopt(curlHandle, CURLOPT_WRITEHEADER, this);
+	curl_easy_setopt(curlHandle, CURLOPT_PROGRESSFUNCTION, progressCallback);
+	curl_easy_setopt(curlHandle, CURLOPT_PROGRESSDATA, this);
 
 	return true;
 }
 
-void AwsRequest::prepareHeaders(const char* httpVerb, const std::string* contentType,
-		const std::string* md5Digest, const std::string& key)
+bool AwsRequest::prepareHeaders(const char* httpVerb, const std::string* contentType,
+		const uint8_t* md5Digest, const std::string& key)
 {
 	auto makeKvPair = [] (const char* key, const std::string& value) -> std::string
 	{
@@ -283,14 +308,26 @@ void AwsRequest::prepareHeaders(const char* httpVerb, const std::string* content
 
 	if (contentType)
 	{
+		VALIDATE(!contentType->empty(), "No content type specified");
 		_privateImpl->curlHeaders = curl_slist_append(_privateImpl->curlHeaders,
 				makeKvPair("Content-Type", *contentType).c_str());
 	}
 	if (md5Digest)
 	{
+		char* allocatedEncode = b64_encode(md5Digest, MD5_DIGEST_LENGTH);
+		std::string encodedString(allocatedEncode);
+		free(allocatedEncode);
+
 		_privateImpl->curlHeaders = curl_slist_append(_privateImpl->curlHeaders,
-				makeKvPair("Content-MD5", *md5Digest).c_str());
+				makeKvPair("Content-MD5", encodedString).c_str());
 	}
+
+	VALIDATE(_accessProfile, "No access profile provided");
+	VALIDATE(_destination, "No destination provided");
+
+	VALIDATE(!_accessProfile->accessKeyId.empty(), "No access key ID");
+	VALIDATE(!_accessProfile->secretAccessKey.empty(), "No secret access key");
+	VALIDATE(!_destination->bucket.empty(), "No bucket name");
 
 	// Auth
 	std::string authToken = "AWS " + _accessProfile->accessKeyId + ":";
@@ -299,32 +336,27 @@ void AwsRequest::prepareHeaders(const char* httpVerb, const std::string* content
 			makeKvPair("Authorization", authToken).c_str());
 
 	curl_easy_setopt(_privateImpl->curlHandle, CURLOPT_HTTPHEADER, _privateImpl->curlHeaders);
+
+	return true;
 }
 
-std::string AwsRequest::calculateEncodedMd5(const AwsPut& put)
+void AwsRequest::calculateMd5(const AwsPut& put, uint8_t* digest)
 {
-	uint8_t md5Digest[MD5_DIGEST_LENGTH];
 	MD5_CTX md5Ctx;
 	MD5_Init(&md5Ctx);
 	MD5_Update(&md5Ctx, put.data, put.dataSize);
-	MD5_Final(md5Digest, &md5Ctx);
-
-	char* allocatedEncode = b64_encode(md5Digest, MD5_DIGEST_LENGTH);
-	std::string encodedString(allocatedEncode);
-	free(allocatedEncode);
-
-	return encodedString;
+	MD5_Final(digest, &md5Ctx);
 }
 
 std::string AwsRequest::generateAuthenticationSignature(const char* httpVerb,
-		const std::string* md5, const std::string* contentType, const std::string& key)
+		const std::string* contentType, const uint8_t* md5Digest, const std::string& key)
 {
 	std::string stringToSign;
 	stringToSign += httpVerb;
 	stringToSign += "\n";
-	if (md5)
+	if (md5Digest)
 	{
-		stringToSign += *md5;
+		stringToSign += reinterpret_cast<const char*>(md5Digest);	// AH: Not sure this is correct? Maybe the b64 encoded variant?
 	}
 	stringToSign += "\n";
 	if (contentType)
@@ -370,6 +402,11 @@ std::string AwsRequest::generateAuthenticationSignature(const char* httpVerb,
 	free(allocatedEncode);
 
 	return encodedString;
+}
+
+AwsRequest::RequestState AwsRequest::state()
+{
+	return _state;
 }
 
 int32_t AwsRequest::onRequest(char *buffer, size_t size, size_t nitems)
@@ -474,6 +511,16 @@ int32_t AwsRequest::onHeader(char *ptr, size_t size, size_t nmemb)
 	return size * nmemb;
 }
 
+int32_t AwsRequest::onProgress(uint64_t dltotal, uint64_t dlnow, uint64_t ultotal, uint64_t ulnow)
+{
+	if (_cancel)
+	{
+		return -1;
+	}
+
+	return 0;
+}
+
 size_t AwsRequest::readCallback(char *buffer, size_t size, size_t nitems, void *userdata)
 {
 	AwsRequest* request = static_cast<AwsRequest*>(userdata);
@@ -490,6 +537,12 @@ size_t AwsRequest::headerCallback(char *ptr, size_t size, size_t nmemb, void *us
 {
 	AwsRequest* request = static_cast<AwsRequest*>(userdata);
 	return request->onHeader(ptr, size, nmemb);
+}
+
+size_t AwsRequest::progressCallback(void *clientp, uint64_t dltotal, uint64_t dlnow, uint64_t ultotal, uint64_t ulnow)
+{
+	AwsRequest* request = static_cast<AwsRequest*>(clientp);
+	return request->onProgress(dltotal, dlnow, ultotal, ulnow);
 }
 
 } // lib
