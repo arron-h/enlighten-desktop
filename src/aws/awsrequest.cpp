@@ -3,7 +3,22 @@
 #include "validation.h"
 #include "logger.h"
 
+#include "b64.h"
+
 #include <curl/curl.h>
+
+// Apple have deprecated OpenSSL on OSX. Use CommonCrypto instead.
+#ifdef __APPLE__
+#	define COMMON_DIGEST_FOR_OPENSSL
+#	include <CommonCrypto/CommonDigest.h>
+#	include <CommonCrypto/CommonHMAC.h>
+#else
+#	include <openssl/md5.h>
+#	include <openssl/sha.h>
+#	include <openssl/hmac.h>
+#endif
+
+
 #include <regex>
 #include <cstdlib>
 #include <cassert>
@@ -16,14 +31,18 @@ namespace lib
 class AwsRequestPrivate
 {
 public:
-	AwsRequestPrivate() : curlHandle(nullptr)
+	AwsRequestPrivate() : curlHandle(nullptr), curlHeaders(nullptr)
 	{
 	}
 
 	~AwsRequestPrivate()
 	{
-		curl_easy_cleanup(curlHandle);
-		curlHandle = nullptr;
+		reset();
+		if (curlHandle)
+		{
+			curl_easy_cleanup(curlHandle);
+			curlHandle = nullptr;
+		}
 	}
 
 	void createHandle()
@@ -38,10 +57,19 @@ public:
 
 	void reset()
 	{
-		curl_easy_reset(curlHandle);
+		if (curlHandle)
+		{
+			curl_easy_reset(curlHandle);
+		}
+		if (curlHeaders)
+		{
+			curl_slist_free_all(curlHeaders);
+			curlHeaders = nullptr;
+		}
 	}
 
 	CURL* curlHandle;
+	curl_slist* curlHeaders;
 };
 
 AwsRequest::AwsRequest(const AwsConfig* config, const AwsAccessProfile* accessProfile,
@@ -67,26 +95,12 @@ bool AwsRequest::headObject(const std::string& key)
 	CURL* handle = _privateImpl->curlHandle;
 	CHECK(handle)
 
+	prepareHeaders("HEAD", nullptr, nullptr, key);
+
 	curl_easy_setopt(handle, CURLOPT_NOBODY, 1l);
 	curl_easy_setopt(handle, CURLOPT_HTTPGET, 1l);
-	CURLcode performResult = curl_easy_perform(handle);
-	curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &_statusCode);
 
-	if (_cancel)
-	{
-		_state = StateCancelled;
-		return false;
-	}
-
-	if(performResult != CURLE_OK)
-	{
-		Logger::get().log(Logger::ERROR, "curl_easy_perform() failed: %s",
-			curl_easy_strerror(performResult));
-	}
-
-	_state = StateComplete;
-
-	return performResult == CURLE_OK;
+	return performRequest();
 }
 
 bool AwsRequest::getObject(const std::string& key, AwsGet& get)
@@ -104,27 +118,14 @@ bool AwsRequest::getObject(const std::string& key, AwsGet& get)
 	_receivedData = 0l;
 	_currentWriteData = &get;
 
-	curl_easy_setopt(handle, CURLOPT_HTTPGET, 1l);
-	CURLcode performResult = curl_easy_perform(handle);
-	curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &_statusCode);
+	prepareHeaders("GET", nullptr, nullptr, key);
 
+	curl_easy_setopt(handle, CURLOPT_HTTPGET, 1l);
+
+	bool success = performRequest();
 	_currentWriteData = nullptr;
 
-	if (_cancel)
-	{
-		_state = StateCancelled;
-		return false;
-	}
-
-	if(performResult != CURLE_OK)
-	{
-		Logger::get().log(Logger::ERROR, "curl_easy_perform() failed: %s",
-			curl_easy_strerror(performResult));
-	}
-
-	_state = StateComplete;
-
-	return performResult == CURLE_OK;
+	return success;
 }
 
 bool AwsRequest::putObject(const std::string& key, const AwsPut& put)
@@ -139,35 +140,19 @@ bool AwsRequest::putObject(const std::string& key, const AwsPut& put)
 	_transferredData = 0l;
 	_currentReadData = &put;
 
-	curl_slist* headers = nullptr;
-	headers = curl_slist_append(headers, "Content-Type: application/octet-stream");	// Only support binary files atm
+	std::string contentType("application/octet-stream");
+	std::string md5Digest = calculateEncodedMd5(put);
+	prepareHeaders("PUT", &contentType, &md5Digest, key);
 
-	curl_easy_setopt(handle, CURLOPT_HTTPHEADER, headers);
 	curl_easy_setopt(handle, CURLOPT_UPLOAD, 1l);
 	curl_easy_setopt(handle, CURLOPT_PUT, 1l);
 	curl_easy_setopt(handle, CURLOPT_INFILESIZE_LARGE,
 		static_cast<curl_off_t>(put.dataSize));
 
-	CURLcode performResult = curl_easy_perform(handle);
-	curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &_statusCode);
-
+	bool success = performRequest();
 	_currentReadData = nullptr;
 
-	if (_cancel)
-	{
-		_state = StateCancelled;
-		return false;
-	}
-
-	if(performResult != CURLE_OK)
-	{
-		Logger::get().log(Logger::ERROR, "curl_easy_perform() failed: %s",
-			curl_easy_strerror(performResult));
-	}
-
-	_state = StateComplete;
-
-	return performResult == CURLE_OK;
+	return success;
 }
 
 bool AwsRequest::removeObject(const std::string& key)
@@ -179,25 +164,11 @@ bool AwsRequest::removeObject(const std::string& key)
 	CURL* handle = _privateImpl->curlHandle;
 	CHECK(handle)
 
+	prepareHeaders("DELETE", nullptr, nullptr, key);
+
 	curl_easy_setopt(handle, CURLOPT_CUSTOMREQUEST, "DELETE");
-	CURLcode performResult = curl_easy_perform(handle);
-	curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &_statusCode);
 
-	if (_cancel)
-	{
-		_state = StateCancelled;
-		return false;
-	}
-
-	if(performResult != CURLE_OK)
-	{
-		Logger::get().log(Logger::ERROR, "curl_easy_perform() failed: %s",
-			curl_easy_strerror(performResult));
-	}
-
-	_state = StateComplete;
-
-	return performResult == CURLE_OK;
+	return performRequest();
 }
 
 void AwsRequest::cancel()
@@ -250,6 +221,30 @@ std::string AwsRequest::prepareUrl(const std::string& key)
 	return url;
 }
 
+bool AwsRequest::performRequest()
+{
+	CURL* handle = _privateImpl->curlHandle;
+
+	CURLcode performResult = curl_easy_perform(handle);
+	curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &_statusCode);
+
+	if (_cancel)
+	{
+		_state = StateCancelled;
+		return false;
+	}
+
+	if(performResult != CURLE_OK)
+	{
+		Logger::get().log(Logger::ERROR, "curl_easy_perform() failed: %s",
+			curl_easy_strerror(performResult));
+	}
+
+	_state = StateComplete;
+
+	return performResult == CURLE_OK;
+}
+
 bool AwsRequest::prepareRequest(const std::string& url)
 {
 	if (!_privateImpl->curlHandle)
@@ -276,6 +271,105 @@ bool AwsRequest::prepareRequest(const std::string& url)
 	curl_easy_setopt(curlHandle, CURLOPT_WRITEHEADER, this);
 
 	return true;
+}
+
+void AwsRequest::prepareHeaders(const char* httpVerb, const std::string* contentType,
+		const std::string* md5Digest, const std::string& key)
+{
+	auto makeKvPair = [] (const char* key, const std::string& value) -> std::string
+	{
+		return std::string(key) + ": " + value;
+	};
+
+	if (contentType)
+	{
+		_privateImpl->curlHeaders = curl_slist_append(_privateImpl->curlHeaders,
+				makeKvPair("Content-Type", *contentType).c_str());
+	}
+	if (md5Digest)
+	{
+		_privateImpl->curlHeaders = curl_slist_append(_privateImpl->curlHeaders,
+				makeKvPair("Content-MD5", *md5Digest).c_str());
+	}
+
+	// Auth
+	std::string authToken = "AWS " + _accessProfile->accessKeyId + ":";
+	authToken += generateAuthenticationSignature(httpVerb, contentType, md5Digest, key);
+	_privateImpl->curlHeaders = curl_slist_append(_privateImpl->curlHeaders,
+			makeKvPair("Authorization", authToken).c_str());
+
+	curl_easy_setopt(_privateImpl->curlHandle, CURLOPT_HTTPHEADER, _privateImpl->curlHeaders);
+}
+
+std::string AwsRequest::calculateEncodedMd5(const AwsPut& put)
+{
+	uint8_t md5Digest[MD5_DIGEST_LENGTH];
+	MD5_CTX md5Ctx;
+	MD5_Init(&md5Ctx);
+	MD5_Update(&md5Ctx, put.data, put.dataSize);
+	MD5_Final(md5Digest, &md5Ctx);
+
+	char* allocatedEncode = b64_encode(md5Digest, MD5_DIGEST_LENGTH);
+	std::string encodedString(allocatedEncode);
+	free(allocatedEncode);
+
+	return encodedString;
+}
+
+std::string AwsRequest::generateAuthenticationSignature(const char* httpVerb,
+		const std::string* md5, const std::string* contentType, const std::string& key)
+{
+	std::string stringToSign;
+	stringToSign += httpVerb;
+	stringToSign += "\n";
+	if (md5)
+	{
+		stringToSign += *md5;
+	}
+	stringToSign += "\n";
+	if (contentType)
+	{
+		stringToSign += *contentType;
+	}
+	stringToSign += "\n";
+
+	std::locale currentLocal;
+	std::locale::global(std::locale("en_US"));
+
+	char timeBuffer[128];
+	std::time_t timeNow = std::time(NULL);
+	std::strftime(timeBuffer, sizeof(timeBuffer), "%a, %d %b %Y %H:%M:%S GMT", std::gmtime(&timeNow));
+
+	std::locale::global(currentLocal);
+
+	stringToSign += timeBuffer;
+	stringToSign += "\n";
+	stringToSign += "/" + _destination->bucket + "/" + _destination->key + "/" + key;
+
+	uint8_t shaDigest[SHA_DIGEST_LENGTH];
+#ifdef __APPLE__
+	CCHmac(kCCHmacAlgSHA1,
+		_accessProfile->secretAccessKey.c_str(),
+		_accessProfile->secretAccessKey.length(),
+		stringToSign.c_str(),
+		stringToSign.length(),
+		shaDigest);
+#else
+	HMAC(EVP_sha1(),
+		_accessProfile->secretAccessKey.c_str(),
+		_accessProfile->secretAccessKet.length(),
+		stringToSign.c_str(),
+		stringToSign.length(),
+		shaDigest,
+		NULL);
+#endif
+
+	// Base64 encode this
+	char* allocatedEncode = b64_encode(shaDigest, SHA_DIGEST_LENGTH);
+	std::string encodedString = allocatedEncode;
+	free(allocatedEncode);
+
+	return encodedString;
 }
 
 int32_t AwsRequest::onRequest(char *buffer, size_t size, size_t nitems)

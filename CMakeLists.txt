@@ -16,16 +16,20 @@ endif ()
 ### Dependencies
 find_package (JPEG REQUIRED)
 list (APPEND DEPENDENCY_LIBS ${JPEG_LIBRARIES})
-
 find_package (CURL REQUIRED)
+list (APPEND DEPENDENCY_LIBS ${CURL_LIBRARIES})
+find_package (OpenSSL REQUIRED)
 list (APPEND DEPENDENCY_LIBS ${CURL_LIBRARIES})
 
 ### Global options and flags
 include_directories (
 	include
 	thirdparty/sqlite3/include
+	thirdparty/b64
 	thirdparty/rapidjson/include
-	${JPEG_INCLUDE_DIR})
+	${JPEG_INCLUDE_DIR}
+	${CURL_INCLUDE_DIR}
+	${OPENSSL_INCLUDE_DIR})
 
 list (APPEND CMAKE_CXX_FLAGS "-std=c++11")
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
@@ -57,8 +61,10 @@ set (LIB_INCLUDE
 	include/synchronizers/previewssynchronizer.h)
 
 ### Source files
-set (SQLITE_SOURCE
-	thirdparty/sqlite3/src/sqlite3.c)
+set (THIRDPARTY_SOURCE
+	thirdparty/sqlite3/src/sqlite3.c
+	thirdparty/b64/encode.c
+	thirdparty/b64/decode.c)
 set (LIB_SOURCE
 	src/cachedpreviews.cpp
 	src/jpeg.cpp
@@ -103,7 +109,7 @@ add_library (enlighten_lib
 	${LIB_INCLUDE}
 	${PLATFORM_LIB_SOURCE}
 	${PLATFORM_LIB_INCLUDE}
-	${SQLITE_SOURCE})
+	${THIRDPARTY_SOURCE})
 
 # CLI executable
 add_executable (enlighten_cli

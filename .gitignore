@@ -3,3 +3,4 @@ build*/
 *.pyc
 *-journal
 /test/data/temp/*.*
+test/data/integrationtemp/previewscache.db

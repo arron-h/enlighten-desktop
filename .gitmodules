@@ -10,3 +10,6 @@
 [submodule "thirdparty/rapidjson"]
 	path = thirdparty/rapidjson
 	url = https://github.com/miloyip/rapidjson.git
+[submodule "thirdparty/b64"]
+	path = thirdparty/b64
+	url = https://github.com/arron-h/b64.c

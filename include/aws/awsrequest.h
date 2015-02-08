@@ -80,8 +80,17 @@ private:
 	static size_t writeCallback(char *ptr, size_t size, size_t nmemb, void *userdata);
 	static size_t headerCallback(char *ptr, size_t size, size_t nmemb, void *userdata);
 
+	bool performRequest();
+
 	bool prepareRequest(const std::string& key);
 	std::string prepareUrl(const std::string& key);
+	void prepareHeaders(const char* httpVerb, const std::string* contentType,
+			const std::string* md5Digest, const std::string& key);
+
+	std::string calculateEncodedMd5(const AwsPut& put);
+	std::string generateAuthenticationSignature(const char* httpVerb,
+			const std::string* contentType, const std::string* md5Digest,
+			const std::string& key);
 
 	int32_t onRequest(char *buffer, size_t size, size_t nitems);
 	int32_t onResponse(char *ptr, size_t size, size_t nmemb);
