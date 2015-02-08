@@ -8,6 +8,7 @@
 #include "synchronizers/previewssynchronizer.h"
 
 #include <thread>
+#include <csignal>
 
 using namespace enlighten;
 
