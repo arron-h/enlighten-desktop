@@ -114,6 +114,9 @@ TEST_F(PreviewsSynchronizerTest, ShouldStartStopSynchronizingFile)
 
 	EXPECT_CALL(mockAwsRequest, putObject(testing::_, testing::_))
 		.Times(3);
+	EXPECT_CALL(mockAwsRequest, statusCode())
+		.Times(3)
+		.WillRepeatedly(testing::Return(200));
 	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile, ""));
 
 	// Wait around awhile
@@ -138,6 +141,9 @@ TEST_F(PreviewsSynchronizerTest, ShouldProcessPreviewsWhenPreviewDatabaseChanges
 		.Times(3);
 	EXPECT_CALL(mockAwsRequest, removeObject(testing::_))
 		.Times(1);
+	EXPECT_CALL(mockAwsRequest, statusCode())
+		.Times(4)
+		.WillRepeatedly(testing::Return(200));
 
 	// Duplicate the database, so we can modify it
 	std::string duplicatedDatabaseName = PreviewsSynchronizer_ValidPreviewFile;
@@ -175,6 +181,9 @@ TEST_F(PreviewsSynchronizerTest, ShouldNotProcessPreviewsIfAlreadyProcessing)
 
 	EXPECT_CALL(mockAwsRequest, putObject(testing::_, testing::_))
 		.Times(3);
+	EXPECT_CALL(mockAwsRequest, statusCode())
+		.Times(3)
+		.WillRepeatedly(testing::Return(200));
 
 	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile, ""));
 
