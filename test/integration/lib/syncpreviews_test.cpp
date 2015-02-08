@@ -22,8 +22,12 @@ namespace
 	public:
 		SyncPreviewsTest()
 		{
+			// Set settings
+			settings.set(IEnlightenSettings::CachedDatabasePath, "integrationtemp/");
+
 			// Purge the cache file
-			File f(CachedPreviews::databaseFileName());
+			std::string cachedDatabaseFile = std::string("integrationtemp/") + CachedPreviews::databaseFileName();
+			File f(cachedDatabaseFile);
 			f.remove();
 
 			// Duplicate the test database, to make these tests standalone

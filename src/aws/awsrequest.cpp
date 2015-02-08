@@ -69,6 +69,7 @@ bool AwsRequest::headObject(const std::string& key)
 	curl_easy_setopt(handle, CURLOPT_NOBODY, 1l);
 	curl_easy_setopt(handle, CURLOPT_HTTPGET, 1l);
 	CURLcode performResult = curl_easy_perform(handle);
+	curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &_statusCode);
 
 	if (_cancel)
 	{
@@ -104,6 +105,7 @@ bool AwsRequest::getObject(const std::string& key, AwsGet& get)
 
 	curl_easy_setopt(handle, CURLOPT_HTTPGET, 1l);
 	CURLcode performResult = curl_easy_perform(handle);
+	curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &_statusCode);
 
 	_currentWriteData = nullptr;
 
@@ -136,12 +138,17 @@ bool AwsRequest::putObject(const std::string& key, const AwsPut& put)
 	_transferredData = 0l;
 	_currentReadData = &put;
 
+	curl_slist* headers = nullptr;
+	headers = curl_slist_append(headers, "Content-Type: application/octet-stream");	// Only support binary files atm
+
+	curl_easy_setopt(handle, CURLOPT_HTTPHEADER, headers);
 	curl_easy_setopt(handle, CURLOPT_UPLOAD, 1l);
 	curl_easy_setopt(handle, CURLOPT_PUT, 1l);
 	curl_easy_setopt(handle, CURLOPT_INFILESIZE_LARGE,
 		static_cast<curl_off_t>(put.dataSize));
 
 	CURLcode performResult = curl_easy_perform(handle);
+	curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &_statusCode);
 
 	_currentReadData = nullptr;
 
@@ -173,6 +180,7 @@ bool AwsRequest::removeObject(const std::string& key)
 
 	curl_easy_setopt(handle, CURLOPT_CUSTOMREQUEST, "DELETE");
 	CURLcode performResult = curl_easy_perform(handle);
+	curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &_statusCode);
 
 	if (_cancel)
 	{
@@ -303,7 +311,6 @@ int32_t AwsRequest::onResponse(char *ptr, size_t size, size_t nmemb)
 
 	if (_state != StateReceiving)
 	{
-		curl_easy_getinfo(_privateImpl->curlHandle, CURLINFO_RESPONSE_CODE, &_statusCode);
 		_state = StateReceiving;
 	}
 
@@ -341,11 +348,12 @@ int32_t AwsRequest::onHeader(char *ptr, size_t size, size_t nmemb)
 
 	std::regex contentLengthRx("Content-Length: (\\d+)\r\n");
 	std::regex contentTypeRx("Content-Type: (.+)\r\n");
+	std::regex eTagTypeRx("ETag: \\\"(.+)\\\"\r\n");
 
 	// Try match content-length
 	std::smatch matches;
 	{
-		std::regex_search(headerContent, matches, contentLengthRx);
+		std::regex_match(headerContent, matches, contentLengthRx);
 		if (matches.size() >= 1)
 		{
 			_response.contentLength = std::stoull(matches[1].str());
@@ -353,10 +361,18 @@ int32_t AwsRequest::onHeader(char *ptr, size_t size, size_t nmemb)
 	}
 	// Try match content-type
 	{
-		std::regex_search(headerContent, matches, contentTypeRx);
+		std::regex_match(headerContent, matches, contentTypeRx);
 		if (matches.size() >= 1)
 		{
 			_response.contentType = matches[1].str();
+		}
+	}
+	// Try match etag
+	{
+		std::regex_match(headerContent, matches, eTagTypeRx);
+		if (matches.size() >= 1)
+		{
+			_response.eTag = matches[1].str();
 		}
 	}
 
