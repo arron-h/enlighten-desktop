@@ -25,7 +25,9 @@ include_directories (
 
 list (APPEND CMAKE_CXX_FLAGS "-std=c++11")
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-	set (PLATFORM_LINK_LIBS "dl pthread")
+	find_package(Threads REQUIRED)
+	list (APPEND PLATFORM_LINK_LIBS "dl")
+	list (APPEND PLATFORM_LINK_LIBS ${CMAKE_THREAD_LIBS_INIT})
 endif ()
 
 ### Include files
