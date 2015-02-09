@@ -103,15 +103,22 @@ TEST_F(AwsRequestTest, PUTShouldAsyncCancel)
 	};
 
 	// Run a few iterations
-	for (int i=0; i < 10; ++i)
+	for (int i=0; i < 20; ++i)
 	{
 		req->reset();
-		uint32_t timeout = rand() % 100;
+		uint32_t timeout = rand() % 50;
 		auto threadHandle = std::thread(threadFunc, timeout);
 
-		EXPECT_FALSE(req->putObject("put", put));
-		EXPECT_EQ(AwsRequest::StateCancelled, req->state());
-		EXPECT_TRUE(req->response() == nullptr);
+		// If the request is really quick, we might not cancel in time.
+		if (req->putObject("put", put))
+		{
+			EXPECT_EQ(AwsRequest::StateComplete, req->state());
+		}
+		else
+		{
+			EXPECT_EQ(AwsRequest::StateCancelled, req->state());
+			EXPECT_TRUE(req->response() == nullptr);
+		}
 
 		threadHandle.join();
 	}
@@ -253,18 +260,24 @@ TEST_F(AwsRequestTest, GETShouldAsyncCancel)
 	};
 
 	// Run a few iterations
-	for (int i=0; i < 10; ++i)
+	for (int i=0; i < 20; ++i)
 	{
 		req->reset();
-		uint32_t timeout = rand() % 100;
+		uint32_t timeout = rand() % 50;
 		auto threadHandle = std::thread(threadFunc, timeout);
 
-		EXPECT_FALSE(req->getObject("/bytes/1024", get));
-		EXPECT_EQ(AwsRequest::StateCancelled, req->state());
-
-		EXPECT_TRUE(req->response() == nullptr);
-		EXPECT_TRUE(get.buffer == nullptr);
-		EXPECT_EQ(0ull, get.bufferSize);
+		// If the request is really quick, we might not cancel in time.
+		if (req->getObject("/bytes/1024", get))
+		{
+			EXPECT_EQ(AwsRequest::StateComplete, req->state());
+		}
+		else
+		{
+			EXPECT_EQ(AwsRequest::StateCancelled, req->state());
+			EXPECT_TRUE(req->response() == nullptr);
+			EXPECT_TRUE(get.buffer == nullptr);
+			EXPECT_EQ(0ull, get.bufferSize);
+		}
 
 		threadHandle.join();
 	}
