@@ -365,14 +365,9 @@ std::string AwsRequest::generateAuthenticationSignature(const char* httpVerb,
 	}
 	stringToSign += "\n";
 
-	std::locale currentLocal;
-	std::locale::global(std::locale("en_US"));
-
 	char timeBuffer[128];
 	std::time_t timeNow = std::time(NULL);
 	std::strftime(timeBuffer, sizeof(timeBuffer), "%a, %d %b %Y %H:%M:%S GMT", std::gmtime(&timeNow));
-
-	std::locale::global(currentLocal);
 
 	stringToSign += timeBuffer;
 	stringToSign += "\n";
