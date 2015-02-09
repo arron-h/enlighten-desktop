@@ -389,7 +389,7 @@ std::string AwsRequest::generateAuthenticationSignature(const char* httpVerb,
 #else
 	HMAC(EVP_sha1(),
 		_accessProfile->secretAccessKey.c_str(),
-		_accessProfile->secretAccessKet.length(),
+		_accessProfile->secretAccessKey.length(),
 		stringToSign.c_str(),
 		stringToSign.length(),
 		shaDigest,
