@@ -19,13 +19,13 @@ list (APPEND DEPENDENCY_LIBS ${JPEG_LIBRARIES})
 find_package (CURL REQUIRED)
 list (APPEND DEPENDENCY_LIBS ${CURL_LIBRARIES})
 find_package (OpenSSL REQUIRED)
-list (APPEND DEPENDENCY_LIBS ${CURL_LIBRARIES})
+list (APPEND DEPENDENCY_LIBS ${OPENSSL_LIBRARIES})
 
 ### Global options and flags
 include_directories (
 	include
 	thirdparty/sqlite3/include
-	thirdparty/b64
+	thirdparty/libb64/include
 	thirdparty/rapidjson/include
 	${JPEG_INCLUDE_DIR}
 	${CURL_INCLUDE_DIR}
@@ -63,8 +63,8 @@ set (LIB_INCLUDE
 ### Source files
 set (THIRDPARTY_SOURCE
 	thirdparty/sqlite3/src/sqlite3.c
-	thirdparty/b64/encode.c
-	thirdparty/b64/decode.c)
+	thirdparty/libb64/src/cencode.c
+	thirdparty/libb64/src/cdecode.c)
 set (LIB_SOURCE
 	src/cachedpreviews.cpp
 	src/jpeg.cpp

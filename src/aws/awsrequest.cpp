@@ -3,7 +3,7 @@
 #include "validation.h"
 #include "logger.h"
 
-#include "b64.h"
+#include "b64/encode.h"
 
 #include <curl/curl.h>
 
@@ -23,6 +23,27 @@
 #include <cstdlib>
 #include <cassert>
 #include <cstring>
+
+namespace
+{
+	std::string Base64Encode(const uint8_t* data, uint32_t dataSize)
+	{
+		uint32_t approximateBufferSize = ((dataSize * 4) / 3) + (dataSize / 96) + 6;
+		char* buffer = (char*) malloc(approximateBufferSize);
+
+		base64::encoder e;
+		int encodeLength = e.encode(
+				reinterpret_cast<const char*>(data),
+				dataSize,
+				buffer);
+
+		std::string encodedString(buffer, encodeLength);
+
+		free(buffer);
+
+		return encodedString;
+	}
+}
 
 namespace enlighten
 {
@@ -314,10 +335,7 @@ bool AwsRequest::prepareHeaders(const char* httpVerb, const std::string* content
 	}
 	if (md5Digest)
 	{
-		char* allocatedEncode = b64_encode(md5Digest, MD5_DIGEST_LENGTH);
-		std::string encodedString(allocatedEncode);
-		free(allocatedEncode);
-
+		std::string encodedString = Base64Encode(md5Digest, MD5_DIGEST_LENGTH);
 		_privateImpl->curlHeaders = curl_slist_append(_privateImpl->curlHeaders,
 				makeKvPair("Content-MD5", encodedString).c_str());
 	}
@@ -374,6 +392,7 @@ std::string AwsRequest::generateAuthenticationSignature(const char* httpVerb,
 	stringToSign += "/" + _destination->bucket + "/" + _destination->key + "/" + key;
 
 	uint8_t shaDigest[SHA_DIGEST_LENGTH];
+	uint32_t digestLength = 0;
 #ifdef __APPLE__
 	CCHmac(kCCHmacAlgSHA1,
 		_accessProfile->secretAccessKey.c_str(),
@@ -381,6 +400,7 @@ std::string AwsRequest::generateAuthenticationSignature(const char* httpVerb,
 		stringToSign.c_str(),
 		stringToSign.length(),
 		shaDigest);
+	digestLength = SHA_DIGEST_LENGTH;
 #else
 	HMAC(EVP_sha1(),
 		_accessProfile->secretAccessKey.c_str(),
@@ -388,15 +408,11 @@ std::string AwsRequest::generateAuthenticationSignature(const char* httpVerb,
 		reinterpret_cast<const uint8_t*>(stringToSign.c_str()),
 		stringToSign.length(),
 		shaDigest,
-		NULL);
+		&digestLength);
 #endif
 
 	// Base64 encode this
-	char* allocatedEncode = b64_encode(shaDigest, SHA_DIGEST_LENGTH);
-	std::string encodedString = allocatedEncode;
-	free(allocatedEncode);
-
-	return encodedString;
+	return Base64Encode(shaDigest, digestLength);
 }
 
 AwsRequest::RequestState AwsRequest::state()
