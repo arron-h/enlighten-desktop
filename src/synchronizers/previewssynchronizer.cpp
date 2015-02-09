@@ -219,7 +219,6 @@ void PreviewsSynchronizer::crunchAndUpload(std::map<uuid_t, SyncAction>* entries
 			break;
 		}
 
-		// TODO - in progress!
 		IAwsRequest* request = _aws->createRequestForDestination(_awsDestinationIdentifier);
 		if (request)
 		{
@@ -227,7 +226,15 @@ void PreviewsSynchronizer::crunchAndUpload(std::map<uuid_t, SyncAction>* entries
 
 			std::string key = entry->filePathRelativeToRoot();
 
-			SyncAction action = it->second;
+			// Replace the extension
+			size_t extensionIndex = key.rfind(".lrprev");
+			if (extensionIndex != std::string::npos)
+			{
+				key.replace(extensionIndex, strlen(".lrprev"), ".jpg");
+			}
+
+			SyncAction action  = it->second;
+			bool requestResult = false;
 			switch(action)
 			{
 				case SyncAction_Add:
@@ -238,12 +245,12 @@ void PreviewsSynchronizer::crunchAndUpload(std::map<uuid_t, SyncAction>* entries
 					put.data = targetJpeg.compressedData(compressedSize);
 					put.dataSize = compressedSize;
 
-					request->putObject(key, put);
+					requestResult = request->putObject(key, put);
 					break;
 				}
 				case SyncAction_Remove:
 				{
-					request->removeObject(key);
+					requestResult = request->removeObject(key);
 					break;
 				}
 				case SyncAction_Update:
@@ -252,7 +259,7 @@ void PreviewsSynchronizer::crunchAndUpload(std::map<uuid_t, SyncAction>* entries
 				}
 			}
 
-			if (request->statusCode() != 200)
+			if (!requestResult)
 			{
 				Logger::get().log(Logger::ERROR, "Request failed! Status code: %u",
 					request->statusCode());

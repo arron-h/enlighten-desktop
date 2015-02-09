@@ -78,6 +78,18 @@ namespace
 		PreviewsSynchronizerTest() : fakeAws(&mockAwsRequest)
 		{
 			settings.set(IEnlightenSettings::CachedDatabasePath, "temp/");
+
+			ON_CALL(mockAwsRequest, putObject(testing::_, testing::_))
+				.WillByDefault(testing::Return(true));
+			ON_CALL(mockAwsRequest, getObject(testing::_, testing::_))
+				.WillByDefault(testing::Return(true));
+			ON_CALL(mockAwsRequest, headObject(testing::_))
+				.WillByDefault(testing::Return(true));
+			ON_CALL(mockAwsRequest, removeObject(testing::_))
+				.WillByDefault(testing::Return(true));
+
+			ON_CALL(mockAwsRequest, statusCode())
+				.WillByDefault(testing::Return(200));
 		}
 		~PreviewsSynchronizerTest()
 		{
@@ -114,9 +126,6 @@ TEST_F(PreviewsSynchronizerTest, ShouldStartStopSynchronizingFile)
 
 	EXPECT_CALL(mockAwsRequest, putObject(testing::_, testing::_))
 		.Times(3);
-	EXPECT_CALL(mockAwsRequest, statusCode())
-		.Times(3)
-		.WillRepeatedly(testing::Return(200));
 	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile, ""));
 
 	// Wait around awhile
@@ -141,9 +150,6 @@ TEST_F(PreviewsSynchronizerTest, ShouldProcessPreviewsWhenPreviewDatabaseChanges
 		.Times(3);
 	EXPECT_CALL(mockAwsRequest, removeObject(testing::_))
 		.Times(1);
-	EXPECT_CALL(mockAwsRequest, statusCode())
-		.Times(4)
-		.WillRepeatedly(testing::Return(200));
 
 	// Duplicate the database, so we can modify it
 	std::string duplicatedDatabaseName = PreviewsSynchronizer_ValidPreviewFile;
@@ -181,9 +187,6 @@ TEST_F(PreviewsSynchronizerTest, ShouldNotProcessPreviewsIfAlreadyProcessing)
 
 	EXPECT_CALL(mockAwsRequest, putObject(testing::_, testing::_))
 		.Times(3);
-	EXPECT_CALL(mockAwsRequest, statusCode())
-		.Times(3)
-		.WillRepeatedly(testing::Return(200));
 
 	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile, ""));
 
