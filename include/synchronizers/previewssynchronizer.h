@@ -33,7 +33,8 @@ public:
 	PreviewsSynchronizer(IEnlightenSettings* settings, IAws* aws);
 	~PreviewsSynchronizer();
 
-	bool beginSynchronizingFile(const std::string& file);
+	bool beginSynchronizingFile(const std::string& file,
+		const std::string& awsDestinationIdentifier);
 	bool stopSynchronizingFile();
 
 	// WatcherDelegate
@@ -55,6 +56,8 @@ private:
 
 	IEnlightenSettings* _settings;
 	IAws* _aws;
+
+	std::string _awsDestinationIdentifier;
 
 	Watcher* _watcher;
 	IFile* _previewsDatabaseFile;

@@ -16,12 +16,20 @@ endif ()
 ### Dependencies
 find_package (JPEG REQUIRED)
 list (APPEND DEPENDENCY_LIBS ${JPEG_LIBRARIES})
+find_package (CURL REQUIRED)
+list (APPEND DEPENDENCY_LIBS ${CURL_LIBRARIES})
+find_package (OpenSSL REQUIRED)
+list (APPEND DEPENDENCY_LIBS ${OPENSSL_LIBRARIES})
 
 ### Global options and flags
 include_directories (
 	include
 	thirdparty/sqlite3/include
-	${JPEG_INCLUDE_DIR})
+	thirdparty/libb64/include
+	thirdparty/rapidjson/include
+	${JPEG_INCLUDE_DIR}
+	${CURL_INCLUDE_DIR}
+	${OPENSSL_INCLUDE_DIR})
 
 list (APPEND CMAKE_CXX_FLAGS "-std=c++11")
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
@@ -46,15 +54,18 @@ set (LIB_INCLUDE
 	include/syncaction.h
 	include/validation.h
 	include/watcher.h
+	include/aws/aws.h
+	include/aws/awsrequest.h
+	include/aws/awsprofilesloader.h
 	include/synchronizers/abstractsynchronizer.h
 	include/synchronizers/previewssynchronizer.h)
 
 ### Source files
-set (SQLITE_SOURCE
-	thirdparty/sqlite3/src/sqlite3.c)
+set (THIRDPARTY_SOURCE
+	thirdparty/sqlite3/src/sqlite3.c
+	thirdparty/libb64/src/cencode.c
+	thirdparty/libb64/src/cdecode.c)
 set (LIB_SOURCE
-	src/aws.cpp
-	src/awsrequest.cpp
 	src/cachedpreviews.cpp
 	src/jpeg.cpp
 	src/jpegcruncher.cpp
@@ -66,6 +77,9 @@ set (LIB_SOURCE
 	src/scanner.cpp
 	src/settings.cpp
 	src/watcher.cpp
+	src/aws/aws.cpp
+	src/aws/awsrequest.cpp
+	src/aws/awsprofilesloader.cpp
 	src/synchronizers/previewssynchronizer.cpp)
 set (CLI_SOURCE
 	src/cli.cpp)
@@ -95,7 +109,7 @@ add_library (enlighten_lib
 	${LIB_INCLUDE}
 	${PLATFORM_LIB_SOURCE}
 	${PLATFORM_LIB_INCLUDE}
-	${SQLITE_SOURCE})
+	${THIRDPARTY_SOURCE})
 
 # CLI executable
 add_executable (enlighten_cli
@@ -110,7 +124,9 @@ include_directories (
 	thirdparty/gtest/include)
 
 # Lib unit tests
-file (GLOB LIB_TEST_SOURCES test/unit/lib/*_test.cpp)
+file (GLOB LIB_TEST_SOURCES
+	test/unit/lib/*_test.cpp
+	test/unit/lib/**/*_test.cpp)
 list (APPEND LIB_TEST_SOURCES test/libunittests.cpp)
 set (LIB_UNIT_TEST_NAME     enlighten_lib_unit_tests)
 add_executable (${LIB_UNIT_TEST_NAME} ${LIB_TEST_SOURCES})

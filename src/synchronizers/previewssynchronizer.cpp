@@ -6,7 +6,7 @@
 #include "jpeg.h"
 #include "file.h"
 #include "settings.h"
-#include "aws.h"
+#include "aws/aws.h"
 #include "logger.h"
 
 #include "validation.h"
@@ -35,7 +35,8 @@ PreviewsSynchronizer::~PreviewsSynchronizer()
 	delete _cachedPreviews;
 }
 
-bool PreviewsSynchronizer::beginSynchronizingFile(const std::string& file)
+bool PreviewsSynchronizer::beginSynchronizingFile(const std::string& file,
+	const std::string& awsDestinationIdentifier)
 {
 	VALIDATE(_state != Synchronizing, "Already in a synchronizing state");
 
@@ -43,6 +44,7 @@ bool PreviewsSynchronizer::beginSynchronizingFile(const std::string& file)
 	CHECK(_cachedPreviews->loadOrCreateDatabase());
 
 	_previewsDatabaseFile = new File(file);
+	_awsDestinationIdentifier = awsDestinationIdentifier;
 
 	int32_t pollRate = _settings->get(IEnlightenSettings::WatcherPollRate, 5000);
 	_watcher = new Watcher(_previewsDatabaseFile, this);
@@ -217,24 +219,52 @@ void PreviewsSynchronizer::crunchAndUpload(std::map<uuid_t, SyncAction>* entries
 			break;
 		}
 
-		// TODO - in progress!
-		IAwsRequest* request = _aws->createRequestForProfile("");
+		IAwsRequest* request = _aws->createRequestForDestination(_awsDestinationIdentifier);
 		if (request)
 		{
 			Logger::get().log(Logger::INFO, "%s - %d", it->first.c_str(), it->second);
 
-			SyncAction action = it->second;
+			std::string key = entry->filePathRelativeToRoot();
+
+			// Replace the extension
+			size_t extensionIndex = key.rfind(".lrprev");
+			if (extensionIndex != std::string::npos)
+			{
+				key.replace(extensionIndex, strlen(".lrprev"), ".jpg");
+			}
+
+			SyncAction action  = it->second;
+			bool requestResult = false;
 			switch(action)
 			{
 				case SyncAction_Add:
-					request->putObject();
-				break;
+				{
+					AwsPut put;
+
+					uint32_t compressedSize;
+					put.data = targetJpeg.compressedData(compressedSize);
+					put.dataSize = compressedSize;
+
+					requestResult = request->putObject(key, put);
+					break;
+				}
 				case SyncAction_Remove:
-					request->removeObject();
-				break;
+				{
+					requestResult = request->removeObject(key);
+					break;
+				}
 				case SyncAction_Update:
-				break;
+				{
+					break;
+				}
 			}
+
+			if (!requestResult)
+			{
+				Logger::get().log(Logger::ERROR, "Request failed! Status code: %u",
+					request->statusCode());
+			}
+
 			_aws->freeRequest(request);
 		}
 

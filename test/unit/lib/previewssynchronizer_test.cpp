@@ -1,8 +1,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-#include "aws.h"
-#include "awsrequest.h"
+#include "aws/aws.h"
+#include "aws/awsrequest.h"
 #include "settings.h"
 #include "file.h"
 #include "cachedpreviews.h"
@@ -21,10 +21,16 @@ namespace
 	class MockAwsRequest : public IAwsRequest
 	{
 	public:
-		MOCK_METHOD0(headObject, bool());
-		MOCK_METHOD0(getObject, bool());
-		MOCK_METHOD0(putObject, bool());
-		MOCK_METHOD0(removeObject, bool());
+		MOCK_METHOD1(headObject, bool(const std::string& key));
+		MOCK_METHOD2(getObject, bool(const std::string& key, AwsGet& get));
+		MOCK_METHOD2(putObject, bool(const std::string& key, const AwsPut& put));
+		MOCK_METHOD1(removeObject, bool(const std::string& key));
+
+		MOCK_METHOD0(cancel, void());
+		MOCK_METHOD0(reset, void());
+
+		MOCK_METHOD0(response, const AwsResponse*());
+		MOCK_METHOD0(statusCode, int32_t());
 	};
 
 	void removeUuidFromDatabaseTable(const char* database, const char* table, const char* uuid)
@@ -53,7 +59,7 @@ namespace
 		{
 		}
 
-		IAwsRequest* createRequestForProfile(const std::string& bucket)
+		IAwsRequest* createRequestForDestination(const std::string& destination)
 		{
 			return _mockRequest;
 		}
@@ -72,6 +78,18 @@ namespace
 		PreviewsSynchronizerTest() : fakeAws(&mockAwsRequest)
 		{
 			settings.set(IEnlightenSettings::CachedDatabasePath, "temp/");
+
+			ON_CALL(mockAwsRequest, putObject(testing::_, testing::_))
+				.WillByDefault(testing::Return(true));
+			ON_CALL(mockAwsRequest, getObject(testing::_, testing::_))
+				.WillByDefault(testing::Return(true));
+			ON_CALL(mockAwsRequest, headObject(testing::_))
+				.WillByDefault(testing::Return(true));
+			ON_CALL(mockAwsRequest, removeObject(testing::_))
+				.WillByDefault(testing::Return(true));
+
+			ON_CALL(mockAwsRequest, statusCode())
+				.WillByDefault(testing::Return(200));
 		}
 		~PreviewsSynchronizerTest()
 		{
@@ -95,20 +113,20 @@ TEST_F(PreviewsSynchronizerTest, ShouldStartAndCancelSynchronizingFile)
 {
 	PreviewsSynchronizer sync(&settings, &fakeAws);
 
-	EXPECT_CALL(mockAwsRequest, putObject())
+	EXPECT_CALL(mockAwsRequest, putObject(testing::_, testing::_))
 		.Times(0);
-	EXPECT_CALL(mockAwsRequest, removeObject())
+	EXPECT_CALL(mockAwsRequest, removeObject(testing::_))
 		.Times(0);
-	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile));
+	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile, ""));
 }
 
 TEST_F(PreviewsSynchronizerTest, ShouldStartStopSynchronizingFile)
 {
 	PreviewsSynchronizer sync(&settings, &fakeAws);
 
-	EXPECT_CALL(mockAwsRequest, putObject())
+	EXPECT_CALL(mockAwsRequest, putObject(testing::_, testing::_))
 		.Times(3);
-	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile));
+	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile, ""));
 
 	// Wait around awhile
 	std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -128,9 +146,9 @@ TEST_F(PreviewsSynchronizerTest, ShouldProcessPreviewsWhenPreviewDatabaseChanges
 	settings.set(IEnlightenSettings::WatcherPollRate, 100);
 	PreviewsSynchronizer sync(&settings, &fakeAws);
 
-	EXPECT_CALL(mockAwsRequest, putObject())
+	EXPECT_CALL(mockAwsRequest, putObject(testing::_, testing::_))
 		.Times(3);
-	EXPECT_CALL(mockAwsRequest, removeObject())
+	EXPECT_CALL(mockAwsRequest, removeObject(testing::_))
 		.Times(1);
 
 	// Duplicate the database, so we can modify it
@@ -143,7 +161,7 @@ TEST_F(PreviewsSynchronizerTest, ShouldProcessPreviewsWhenPreviewDatabaseChanges
 		file.duplicate(duplicatedDatabaseName.c_str());
 	}
 
-	EXPECT_TRUE(sync.beginSynchronizingFile(duplicatedDatabaseName));
+	EXPECT_TRUE(sync.beginSynchronizingFile(duplicatedDatabaseName, ""));
 
 	// Wait around awhile
 	std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -167,10 +185,10 @@ TEST_F(PreviewsSynchronizerTest, ShouldNotProcessPreviewsIfAlreadyProcessing)
 {
 	PreviewsSynchronizer sync(&settings, &fakeAws);
 
-	EXPECT_CALL(mockAwsRequest, putObject())
+	EXPECT_CALL(mockAwsRequest, putObject(testing::_, testing::_))
 		.Times(3);
 
-	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile));
+	EXPECT_TRUE(sync.beginSynchronizingFile(PreviewsSynchronizer_ValidPreviewFile, ""));
 
 	// Inject a change
 	File file(PreviewsSynchronizer_ValidPreviewFile);
