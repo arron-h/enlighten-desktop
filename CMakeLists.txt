@@ -38,6 +38,9 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	list (APPEND PLATFORM_LINK_LIBS ${CMAKE_THREAD_LIBS_INIT})
 endif ()
 
+add_definitions ("-DRAPIDJSON_HAS_STDSTRING"
+	"-DRAPIDJSON_HAS_CX11_RVALUE_REFS")
+
 ### Include files
 set (LIB_INCLUDE
 	include/cachedpreviews.h

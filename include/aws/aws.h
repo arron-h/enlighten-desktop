@@ -20,18 +20,35 @@ struct AwsAccessProfile
 {
 	std::string accessKeyId;
 	std::string secretAccessKey;
+
+	bool operator==(const AwsAccessProfile& rhs) const
+	{
+		return accessKeyId == rhs.accessKeyId &&
+			secretAccessKey == rhs.secretAccessKey;
+	}
 };
 
 struct AwsDestination
 {
 	std::string bucket;
 	std::string key;
+
+	bool operator==(const AwsDestination& rhs) const
+	{
+		return bucket == rhs.bucket &&
+			key == rhs.key;
+	}
 };
 
 class IAws
 {
 public:
 	virtual ~IAws() {}
+
+	virtual bool initialiseDestinationWithProfile(
+		const std::string& destinationIdentifier,
+		const AwsAccessProfile& accessProfile,
+		const AwsDestination& destination) = 0;
 
 	virtual IAwsRequest* createRequestForDestination(const std::string& destinationIdentifier) = 0;
 	virtual void freeRequest(IAwsRequest* request) = 0;

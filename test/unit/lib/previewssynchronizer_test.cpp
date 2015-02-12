@@ -59,6 +59,14 @@ namespace
 		{
 		}
 
+		bool initialiseDestinationWithProfile(
+			const std::string& destinationIdentifier,
+			const AwsAccessProfile& accessProfile,
+			const AwsDestination& destination)
+		{
+			return true;
+		}
+
 		IAwsRequest* createRequestForDestination(const std::string& destination)
 		{
 			return _mockRequest;
