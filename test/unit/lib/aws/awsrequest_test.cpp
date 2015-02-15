@@ -304,7 +304,7 @@ TEST_F(AwsRequestTest, ShouldFailWhenCredentialsAreInvalid)
 TEST_F(AwsRequestTest, ShouldFailWhenHostnameIsInvalid)
 {
 	AwsConfig cfg;
-	cfg.hostName = "http://thisurldoesnotexistihopelol.hello";
+	cfg.hostName = "localhost:1";
 	AwsRequest badRequest(&cfg, &accessProfile, &destination);
 	EXPECT_FALSE(badRequest.headObject("get"));
 }
