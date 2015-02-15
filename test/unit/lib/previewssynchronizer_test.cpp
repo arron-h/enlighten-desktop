@@ -85,7 +85,7 @@ namespace
 	public:
 		PreviewsSynchronizerTest() : fakeAws(&mockAwsRequest)
 		{
-			settings.set(IEnlightenSettings::CachedDatabasePath, "temp/");
+			EXPECT_TRUE(settings.initialise());
 
 			ON_CALL(mockAwsRequest, putObject(testing::_, testing::_))
 				.WillByDefault(testing::Return(true));
@@ -106,7 +106,7 @@ namespace
 		}
 
 	protected:
-		EnlightenSettings settings;
+		Settings settings;
 		MockAwsRequest mockAwsRequest;
 		FakeAws fakeAws;
 	};
@@ -151,7 +151,7 @@ TEST_F(PreviewsSynchronizerTest, ShouldFailStopSynchronizingFileIfNotStarted)
 
 TEST_F(PreviewsSynchronizerTest, ShouldProcessPreviewsWhenPreviewDatabaseChanges)
 {
-	settings.set(IEnlightenSettings::WatcherPollRate, 100);
+	settings.set(settings::WatcherPollRate, 100);
 	PreviewsSynchronizer sync(&settings, &fakeAws);
 
 	EXPECT_CALL(mockAwsRequest, putObject(testing::_, testing::_))

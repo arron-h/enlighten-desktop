@@ -11,7 +11,7 @@ namespace enlighten
 {
 namespace lib
 {
-class IEnlightenSettings;
+class IStaticSettings;
 class ICachedPreviews
 {
 public:
@@ -27,7 +27,7 @@ public:
 class CachedPreviews : public ICachedPreviews
 {
 public:
-	CachedPreviews(IEnlightenSettings* settings);
+	CachedPreviews(IStaticSettings* settings);
 	~CachedPreviews();
 
 	bool loadOrCreateDatabase();
@@ -46,7 +46,7 @@ private:
 
 private:
 	sqlite3* _sqliteDatabase;
-	IEnlightenSettings* _settings;
+	IStaticSettings* _settings;
 };
 } // lib
 } // enlighten

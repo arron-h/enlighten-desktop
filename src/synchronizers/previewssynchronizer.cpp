@@ -18,7 +18,7 @@ namespace enlighten
 {
 namespace lib
 {
-PreviewsSynchronizer::PreviewsSynchronizer(IEnlightenSettings* settings, IAws* aws) :
+PreviewsSynchronizer::PreviewsSynchronizer(ISettings* settings, IAws* aws) :
 	_previewsDatabase(new PreviewsDatabase()),
 	_cachedPreviews(new CachedPreviews(settings)),
 	_settings(settings), _aws(aws), _watcher(nullptr),
@@ -46,7 +46,7 @@ bool PreviewsSynchronizer::beginSynchronizingFile(const std::string& file,
 	_previewsDatabaseFile = new File(file);
 	_awsDestinationIdentifier = awsDestinationIdentifier;
 
-	int32_t pollRate = _settings->get(IEnlightenSettings::WatcherPollRate, 5000);
+	int32_t pollRate = _settings->get(settings::WatcherPollRate, 5000).toInt();
 	_watcher = new Watcher(_previewsDatabaseFile, this);
 	_watcher->beginWatchingForChanges(pollRate);
 
@@ -176,8 +176,8 @@ void PreviewsSynchronizer::crunchAndUpload(std::map<uuid_t, SyncAction>* entries
 			continue;
 		}
 
-		int32_t previewLongestDimension = _settings->get(IEnlightenSettings::PreviewLongestDimension, 220);
-		int32_t previewQuality          = _settings->get(IEnlightenSettings::PreviewQuality, 40);
+		int32_t previewLongestDimension = _settings->get(settings::PreviewLongestDimension).toInt();
+		int32_t previewQuality          = _settings->get(settings::PreviewQuality, 40).toInt();
 
 		uint32_t desiredLevel = entry->closestLevelToDimension(static_cast<float>(previewLongestDimension));
 		if (desiredLevel == PreviewEntry::INVALID_LEVEL_INDEX)

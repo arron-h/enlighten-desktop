@@ -22,11 +22,8 @@ namespace
 	public:
 		SyncPreviewsTest()
 		{
-			// Set settings
-			settings.set(IEnlightenSettings::CachedDatabasePath, "integrationtemp/");
-
 			// Purge the cache file
-			std::string cachedDatabaseFile = std::string("integrationtemp/") + CachedPreviews::databaseFileName();
+			std::string cachedDatabaseFile = std::string(applicationSettingsDirectory()) + CachedPreviews::databaseFileName();
 			File f(cachedDatabaseFile);
 			f.remove();
 
@@ -57,7 +54,7 @@ namespace
 
 		const char* databaseFileName = "temp/SyncPreviewsTest_previews.db";
 		PreviewsSynchronizer* synchronizer;
-		EnlightenSettings settings;
+		Settings settings;
 	};
 }
 

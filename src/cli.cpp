@@ -25,11 +25,37 @@ namespace
 		}
 	};
 
+	class PlatformTools
+	{
+	public:
+		PlatformTools()
+		{
+			_applicationSettingsDirectory = std::string(getenv("HOME")) + "/.config/enlighten/";
+		}
+
+		const char* applicationSettingsDirectory()
+		{
+			return _applicationSettingsDirectory.c_str();
+		}
+
+	private:
+		std::string _applicationSettingsDirectory;
+	};
+
 	void applicationSignalHandler(int signal)
 	{
 		applicationSignalStatus = signal;
 	}
+
+	static PlatformTools platformTools;
 }
+
+namespace enlighten { namespace lib {
+	const char* applicationSettingsDirectory()
+	{
+		return platformTools.applicationSettingsDirectory();
+	}
+}}
 
 void printUsage(const char* arg0)
 {
@@ -55,7 +81,7 @@ int main(int argc, char* argv[])
 	char* filePath = argv[1];
 	char* awsDestination = argv[2];
 
-	lib::EnlightenSettings settings;
+	lib::Settings settings;
 	lib::Aws& aws = lib::Aws::get();
 
 	lib::Scanner scanner;

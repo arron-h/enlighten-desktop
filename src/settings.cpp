@@ -1,60 +1,167 @@
 #include "settings.h"
+#include <cassert>
+
+namespace
+{
+	const char* kLongestDimensionDefault = "220";
+}
 
 namespace enlighten
 {
 namespace lib
 {
-
-
-EnlightenSettings::EnlightenSettings()
+SettingValue::SettingValue(const std::string* data) :
+	_baseType(kString), _data(data)
 {
 }
 
-EnlightenSettings::~EnlightenSettings()
+SettingValue::SettingValue(const int32_t* data) :
+	_baseType(kInt), _data(data)
 {
 }
 
-const std::string& EnlightenSettings::get(Setting setting, const std::string& defaultValue)
+SettingValue::SettingValue(const double* data) :
+	_baseType(kDouble), _data(data)
 {
-	std::map<Setting, std::string>::iterator it = _settings.find(setting);
+}
+
+const std::string& SettingValue::toString() const
+{
+	assert(_baseType == kString);
+
+	const std::string* value = static_cast<const std::string*>(_data);
+	return *value;
+}
+
+int32_t SettingValue::toInt() const
+{
+	if (_baseType == kString)
+	{
+		const std::string* value = static_cast<const std::string*>(_data);
+		return stoi(*value);
+	}
+	else if (_baseType == kInt)
+	{
+		return *static_cast<const int32_t*>(_data);
+	}
+	else if (_baseType == kDouble)
+	{
+		return static_cast<int32_t>(*static_cast<const double*>(_data));
+	}
+
+	assert(!"Unknown base type");
+	return 0;
+}
+
+double SettingValue::toDouble() const
+{
+	if (_baseType == kString)
+	{
+		const std::string* value = static_cast<const std::string*>(_data);
+		return stod(*value);
+	}
+	else if (_baseType == kInt)
+	{
+		return static_cast<double>(*static_cast<const int32_t*>(_data));
+	}
+	else if (_baseType == kDouble)
+	{
+		return *static_cast<const double*>(_data);
+	}
+
+	assert(!"Unknown base type");
+	return 0;
+}
+
+Settings::Settings() : _initialised(false)
+{
+}
+
+Settings::~Settings()
+{
+}
+
+bool Settings::initialise()
+{
+	// Load
+	bool initialisedCorrectly =
+		loadStaticSettings() && loadUserSettings();
+
+	if (initialisedCorrectly)
+		_initialised = true;
+
+	return initialisedCorrectly;
+}
+
+bool Settings::loadUserSettings()
+{
+	return true;
+}
+
+bool Settings::loadStaticSettings()
+{
+	_staticSettings[settings::PreviewLongestDimension] = kLongestDimensionDefault;
+	_staticSettings[settings::CachedDatabasePath] = applicationSettingsDirectory();
+	_staticSettings[settings::ProfilesPath] = applicationSettingsDirectory();
+
+	return true;
+}
+
+SettingValue Settings::get(settings::StaticSetting setting) const
+{
+	assert(setting >= 0 && setting < settings::NumStaticSettings);
+
+	SettingValue v(&_staticSettings.at(setting));
+	return v;
+}
+
+SettingValue Settings::get(settings::UserSetting setting, const std::string& defaultValue) const
+{
+	assert(setting >= 0 && setting < settings::NumUserSettings);
+
+	std::map<settings::UserSetting, std::string>::const_iterator it = _settings.find(setting);
 	if (it != _settings.end())
 	{
-		return it->second;
+		return SettingValue(&it->second);
 	}
-	return defaultValue;
+	return SettingValue(&defaultValue);
 }
 
-void EnlightenSettings::set(Setting setting, const std::string& value)
+void Settings::set(settings::UserSetting setting, const std::string& value)
 {
 	_settings[setting] = value;
 }
 
-int32_t EnlightenSettings::get(Setting setting, int32_t defaultValue)
+SettingValue Settings::get(settings::UserSetting setting, const int32_t& defaultValue) const
 {
-	std::map<Setting, std::string>::iterator it = _settings.find(setting);
+	assert(setting >= 0 && setting < settings::NumUserSettings);
+
+	std::map<settings::UserSetting, std::string>::const_iterator it = _settings.find(setting);
 	if (it != _settings.end())
 	{
-		return stoi(it->second);
+		return SettingValue(&it->second);
 	}
-	return defaultValue;
+	return SettingValue(&defaultValue);
 }
 
-void EnlightenSettings::set(Setting setting, int32_t value)
+void Settings::set(settings::UserSetting setting, int32_t value)
 {
 	_settings[setting] = std::to_string(value);
 }
 
-double EnlightenSettings::get(Setting setting, double defaultValue)
+SettingValue Settings::get(settings::UserSetting setting, const double& defaultValue) const
 {
-	std::map<Setting, std::string>::iterator it = _settings.find(setting);
+	assert(setting >= 0 && setting < settings::NumUserSettings);
+
+	std::map<settings::UserSetting, std::string>::const_iterator it = _settings.find(setting);
 	if (it != _settings.end())
 	{
-		return stod(it->second);
+		return SettingValue(&it->second);
 	}
-	return defaultValue;
+	return SettingValue(&defaultValue);
 }
 
-void EnlightenSettings::set(Setting setting, double value)
+void Settings::set(settings::UserSetting setting, double value)
 {
 	_settings[setting] = std::to_string(value);
 }

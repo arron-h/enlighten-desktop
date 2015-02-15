@@ -14,6 +14,13 @@ public:
 	}
 };
 
+namespace enlighten { namespace lib {
+	const char* applicationSettingsDirectory()
+	{
+		return "integrationtemp/";
+	}
+}}
+
 int main(int argc, char **argv)
 {
 	ConsoleLoggerDelegate delegate;

@@ -20,7 +20,7 @@ namespace lib
 class PreviewsDatabase;
 class CachedPreviews;
 class Watcher;
-class IEnlightenSettings;
+class ISettings;
 class IFile;
 class IAws;
 class PreviewsSynchronizer : public AbstractSynchronizer, public AbstractWatcherDelegate
@@ -30,7 +30,7 @@ private:
 	typedef std::function<void(const uuid_t&, const std::string&)> ErrorCallbackFunc;
 
 public:
-	PreviewsSynchronizer(IEnlightenSettings* settings, IAws* aws);
+	PreviewsSynchronizer(ISettings* settings, IAws* aws);
 	~PreviewsSynchronizer();
 
 	bool beginSynchronizingFile(const std::string& file,
@@ -54,7 +54,7 @@ private:
 	PreviewsDatabase* _previewsDatabase;
 	CachedPreviews* _cachedPreviews;
 
-	IEnlightenSettings* _settings;
+	ISettings* _settings;
 	IAws* _aws;
 
 	std::string _awsDestinationIdentifier;

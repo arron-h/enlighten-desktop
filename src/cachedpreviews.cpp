@@ -11,7 +11,7 @@ namespace enlighten
 {
 namespace lib
 {
-CachedPreviews::CachedPreviews(IEnlightenSettings* settings) : _sqliteDatabase(nullptr),
+CachedPreviews::CachedPreviews(IStaticSettings* settings) : _sqliteDatabase(nullptr),
 	_settings(settings)
 {
 }
@@ -24,7 +24,7 @@ CachedPreviews::~CachedPreviews()
 
 bool CachedPreviews::loadOrCreateDatabase()
 {
-	std::string filePath = _settings->get(EnlightenSettings::CachedDatabasePath, "");
+	std::string filePath = _settings->get(settings::CachedDatabasePath).toString();
 	filePath += databaseFileName();
 
 	int dbOpenResult = sqlite3_open_v2(filePath.c_str(), &_sqliteDatabase,

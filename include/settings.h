@@ -8,49 +8,112 @@ namespace enlighten
 {
 namespace lib
 {
-class IEnlightenSettings
+const char* applicationSettingsDirectory();
+
+namespace settings
 {
-public:
-	enum Setting
+	enum UserSetting
+	{
+		WatcherPollRate,
+		PreviewQuality,
+
+		NumUserSettings
+	};
+
+	enum StaticSetting
 	{
 		CachedDatabasePath,
-		WatcherPollRate,
-
-		// Probably non-user defined
+		ProfilesPath,
 		PreviewLongestDimension,
-		PreviewQuality
+
+		NumStaticSettings
+	};
+} // settings
+
+class SettingValue
+{
+public:
+	enum BaseType
+	{
+		kString,
+		kInt,
+		kDouble
 	};
 
 public:
-	virtual ~IEnlightenSettings() {}
+	SettingValue(const std::string* data);
+	SettingValue(const int32_t* data);
+	SettingValue(const double* data);
 
-	virtual const std::string& get(Setting setting, const std::string& defaultValue) = 0;
-	virtual int32_t get(Setting setting, int32_t defaultValue) = 0;
-	virtual double get(Setting setting, double defaultValue) = 0;
-
-	virtual void set(Setting setting, const std::string& value) = 0;
-	virtual void set(Setting setting, const int32_t value) = 0;
-	virtual void set(Setting setting, const double value) = 0;
-};
-
-class EnlightenSettings : public IEnlightenSettings
-{
-public:
-	EnlightenSettings();
-	~EnlightenSettings();
-
-	const std::string& get(Setting setting, const std::string& defaultValue);
-	int32_t get(Setting setting, int32_t defaultValue);
-	double get(Setting setting, double defaultValue);
-
-	void set(Setting setting, const std::string& value);
-	void set(Setting setting, const int32_t value);
-	void set(Setting setting, const double value);
+	const std::string& toString() const;
+	int32_t toInt() const;
+	double toDouble() const;
 
 private:
-	std::map<Setting, std::string> _settings;
+	BaseType _baseType;
+	const void* _data;
+};
+
+class IUserSettings
+{
+public:
+	virtual ~IUserSettings() {}
+
+	virtual SettingValue get(settings::UserSetting setting, const std::string& defaultValue) const = 0;
+	virtual SettingValue get(settings::UserSetting setting, const int32_t& defaultValue) const = 0;
+	virtual SettingValue get(settings::UserSetting setting, const double& defaultValue) const = 0;
+};
+
+class IStaticSettings
+{
+public:
+	virtual ~IStaticSettings() {}
+
+	virtual SettingValue get(settings::StaticSetting setting) const = 0;
+};
+
+class ISettings : public IUserSettings, public IStaticSettings
+{
+public:
+	virtual ~ISettings() {}
+
+	virtual SettingValue get(settings::StaticSetting setting) const = 0;
+	virtual SettingValue get(settings::UserSetting setting, const std::string& defaultValue) const = 0;
+	virtual SettingValue get(settings::UserSetting setting, const int32_t& defaultValue) const = 0;
+	virtual SettingValue get(settings::UserSetting setting, const double& defaultValue) const = 0;
+};
+
+class Settings : public ISettings
+{
+public:
+	Settings();
+	~Settings();
+
+	bool initialise();
+
+	void set(settings::UserSetting setting, const std::string& value);
+	void set(settings::UserSetting setting, const int32_t value);
+	void set(settings::UserSetting setting, const double value);
+
+	SettingValue get(settings::StaticSetting setting) const;
+
+	SettingValue get(settings::UserSetting setting, const std::string& defaultValue) const;
+	SettingValue get(settings::UserSetting setting, const int32_t& defaultValue) const;
+	SettingValue get(settings::UserSetting setting, const double& defaultValue) const;
+
+private:
+	Settings(const Settings&);
+	Settings& operator=(const Settings&);
+
+	bool loadUserSettings();
+	bool loadStaticSettings();
+
+	std::map<settings::UserSetting, std::string> _settings;
+	std::map<settings::StaticSetting, std::string> _staticSettings;
+
+	bool _initialised;
 };
 } // lib
 } // enlighten
 
-#endif // PREVIEWS_DATABASE_H
+#endif // SETTINGS_H
