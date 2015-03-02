@@ -36,6 +36,10 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	find_package(Threads REQUIRED)
 	list (APPEND PLATFORM_LINK_LIBS "dl")
 	list (APPEND PLATFORM_LINK_LIBS ${CMAKE_THREAD_LIBS_INIT})
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+	find_library (FOUNDATION_LIBRARY Foundation)
+	mark_as_advanced (FOUNDATION_LIBRARY)
+	list (APPEND PLATFORM_LINK_LIBS ${FOUNDATION_LIBRARY})
 endif ()
 
 add_definitions ("-DRAPIDJSON_HAS_STDSTRING"
@@ -45,6 +49,7 @@ add_definitions ("-DRAPIDJSON_HAS_STDSTRING"
 set (LIB_INCLUDE
 	include/cachedpreviews.h
 	include/ifile.h
+	include/ipaths.h
 	include/jpeg.h
 	include/jpegcruncher.h
 	include/lrprev.h
@@ -90,16 +95,23 @@ set (CLI_SOURCE
 ### Platform source/include files
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	set (PLATFORM_LIB_INCLUDE
-		include/platform/osx/file.h)
+		include/platform/osx/file.h
+		include/platform/osx/paths.h)
 	set (PLATFORM_LIB_SOURCE
-		src/platform/osx/file.cpp)
+		src/platform/osx/file.cpp
+		src/platform/osx/paths.mm)
 
 	include_directories(include/platform/osx)
+	set_source_files_properties(${PLATFORM_LIB_SOURCE} PROPERTIES
+		COMPILE_FLAGS "-x objective-c++")
+
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	set (PLATFORM_LIB_INCLUDE
-		include/platform/linux/file.h)
+		include/platform/linux/file.h
+		include/platform/linux/paths.h)
 	set (PLATFORM_LIB_SOURCE
-		src/platform/linux/file.cpp)
+		src/platform/linux/file.cpp
+		src/platform/linux/paths.cpp)
 
 	include_directories(include/platform/linux)
 endif ()

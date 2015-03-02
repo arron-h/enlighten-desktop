@@ -4,6 +4,7 @@
 #include "settings.h"
 #include "aws/aws.h"
 #include "logger.h"
+#include "paths.h"
 #include "scanner.h"
 #include "synchronizers/previewssynchronizer.h"
 
@@ -15,6 +16,7 @@ using namespace enlighten;
 namespace
 {
 	volatile sig_atomic_t applicationSignalStatus = 0;
+	lib::Paths platformPaths;
 
 	class ConsoleLoggerDelegate : public lib::AbstractLoggerDelegate
 	{
@@ -25,35 +27,16 @@ namespace
 		}
 	};
 
-	class PlatformTools
-	{
-	public:
-		PlatformTools()
-		{
-			_applicationSettingsDirectory = std::string(getenv("HOME")) + "/.config/enlighten/";
-		}
-
-		const char* applicationSettingsDirectory()
-		{
-			return _applicationSettingsDirectory.c_str();
-		}
-
-	private:
-		std::string _applicationSettingsDirectory;
-	};
-
 	void applicationSignalHandler(int signal)
 	{
 		applicationSignalStatus = signal;
 	}
-
-	static PlatformTools platformTools;
 }
 
 namespace enlighten { namespace lib {
 	const char* applicationSettingsDirectory()
 	{
-		return platformTools.applicationSettingsDirectory();
+		return platformPaths.applicationSettings();
 	}
 }}
 
